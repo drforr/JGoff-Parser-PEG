@@ -5,13 +5,13 @@ use Moose;                # XXX May be removed later
 use Function::Parameters; # XXX WIll probably be removed later
 use Readonly;
 
-Readonly our $IChar   => 'IChar';
-Readonly our $IEnd    => 'IEnd';
-Readonly our $IGiveup => 'IGiveup';
-Readonly our $IFail   => 'IFail';
-Readonly our $IAny    => 'IAny';
-Readonly our $IAny    => 'ITestAny';
-Readonly our $IRet    => 'IRet';
+Readonly our $IChar    => 'IChar';
+Readonly our $IEnd     => 'IEnd';
+Readonly our $IGiveup  => 'IGiveup';
+Readonly our $IFail    => 'IFail';
+Readonly our $IAny     => 'IAny';
+Readonly our $TestIAny => 'ITestAny';
+Readonly our $IRet     => 'IRet';
 
 =head1 NAME
 
@@ -48,10 +48,18 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =cut
 
+# {{{ run ( $op, $s )
+
+method _push ( $e, %arguments ) {
+  push @{ $e }, { %arguments };
+}
+
 method run ( $op, $s ) {
-  my $e = [ { p => { opcode => $IGiveup } } ];
+  my $e = [ ];
   my $i = 0;
   my $pc = 0;
+
+  $self->_push( $e, p => { opcode => $IGiveup } );
 
   my $p;
 
@@ -65,9 +73,6 @@ last unless $count--;
       if ( @{ $e } <= 0 ) {
         die "$IEnd: Stack depth < 1!\n";
       }
-      # capture[ captop ].kind = Cclose;
-      # capture[ captop ].s    = NULL;
-      # return s;
       last;
     }
     elsif ( $opcode eq $IGiveup ) {
@@ -103,18 +108,29 @@ last unless $count--;
 #      }
 #    }
 #    elsif ( $opcode eq $IRet ) {
+#      pop @{ $e };
+#      $pc = $e->[ -1 ]->{pc};
+#    }
+#    elsif ( $opcode eq $IChoice ) {
+#      $e->[ -1 ]->{pc} = $pc + $op->[ $pc + 1 ]->{offset};
+#      $e->[ -1 ]->{i} = $i;
+##      $e->[ -1 ]->{caplevel} = $caplevel;
+#      $
 #    }
 
     if ( $fail ) {
       while ( !defined( $s ) ) {
-        pop @{ $e };
-        $s = $e->[-1]->{s};
+        my $top = pop @{ $e };
+        $s = $top->{s};
       }
-      $p = $e->[-1]->{p};
+      $p = $e->[-1]->{p}; # XXX This is going to get hacked into shape.
+      next;
     }
   }
   return !$error;
 }
+
+# }}}
 
 ### {{{ Opcode interpreter - unswizzle program counter
 ###

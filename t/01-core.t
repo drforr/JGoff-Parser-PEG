@@ -94,19 +94,19 @@ is_deeply
                  'aa' ) );
 }
 
-{ my $vm = JGoff::Parser::PEG::VM->new;
-  ok( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::ITestAny,
-                    offset => 3 },
-                  { opcode => $JGoff::Parser::PEG::VM::IRet },
-                  { opcode => $JGoff::Parser::PEG::VM::IChoice },
-                  { opcode => $JGoff::Parser::PEG::VM::ISpan },
-                  { opcode => $JGoff::Parser::PEG::VM::IAny },
-                  { opcode => $JGoff::Parser::PEG::VM::IAny },
-                  { opcode => $JGoff::Parser::PEG::VM::IAny },
-                  { opcode => $JGoff::Parser::PEG::VM::IFailTwice },
-                  { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
-                'aa' ) );
-}
+#{ my $vm = JGoff::Parser::PEG::VM->new;
+#  ok( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::ITestAny,
+#                    offset => 3 },
+#                  { opcode => $JGoff::Parser::PEG::VM::IRet },
+#                  { opcode => $JGoff::Parser::PEG::VM::IChoice },
+#                  { opcode => $JGoff::Parser::PEG::VM::ISpan },
+#                  { opcode => $JGoff::Parser::PEG::VM::IAny },
+#                  { opcode => $JGoff::Parser::PEG::VM::IAny },
+#                  { opcode => $JGoff::Parser::PEG::VM::IAny },
+#                  { opcode => $JGoff::Parser::PEG::VM::IFailTwice },
+#                  { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
+#                'aa' ) );
+#}
 
 #{ my $vm = JGoff::Parser::PEG::VM->new;
 #  $vm->run(
