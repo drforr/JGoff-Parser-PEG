@@ -5,7 +5,8 @@ use Function::Parameters; # XXX WIll probably be removed later
 
 use Readonly;
 
-use JGoff::Parser::PEG::Core;
+use JGoff::Parser::PEG::Compile;
+use JGoff::Parser::PEG::VM;
 
 =head1 NAME
 

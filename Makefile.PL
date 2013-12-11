@@ -20,5 +20,5 @@ WriteMakefile(
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'JGoff-Parser-PEG-*' },
-    test                => { TESTS => 't/*.t t/format/*.t' },
+    test                => { TESTS => 't/*.t' },
 );

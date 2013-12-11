@@ -3,10 +3,13 @@ package JGoff::Parser::PEG::Compile;
 use Moose;                # XXX May be removed later
 use Function::Parameters; # XXX Will probably be removed later
 
-method _Choice ( $offset ) { [ Choice => $offset ] }
-method _Commit ( $offset ) { [ Commit => $offset ] }
 method _Char ( $character ) { [ Char => $character ] }
 method _Any ( ) { [ 'Any' ] }
+method _Choice ( $offset ) { [ Choice => $offset ] }
+method _Jump ( $offset ) { [ Jump => $offset ] }
+method _Call ( $offset ) { [ Call => $offset ] }
+method _Return ( ) { [ 'Return' ] }
+method _Commit ( $offset ) { [ Commit => $offset ] }
 method _Fail ( ) { [ 'Any' ] }
 
 =head1 NAME
@@ -29,13 +32,12 @@ Perhaps a little code snippet.
 
     use JGoff::Parser::PEG::Compile;
 
-    my $foo = JGoff::Parser::PEG::Compile->new;
-    $foo->run( [ $tuple1, $tuple2, ... ] );
+    my $compiler = JGoff::Parser::PEG::Compile->new;
     ...
 
 =head1 METHODS
 
-=head2 Concatenate( $p1, $p2 )
+=head2 Concatenate( $p1, $p2 ) # $p1 $p2
 
 =cut
 
@@ -46,11 +48,11 @@ method Concatenate( $p1, $p2 ) {
   ];
 }
 
-=head2 Ordered_choice( $p1, $p2 )
+=head2 Ordered_Choice( $p1, $p2 ) # $p1 / $p2
 
 =cut
 
-method Ordered_choice( $p1, $p2 ) {
+method Ordered_Choice( $p1, $p2 ) {
   return [
     $self->_Choice( @{ $p1 } + 2 ),
     @{ $p1 },
@@ -59,7 +61,7 @@ method Ordered_choice( $p1, $p2 ) {
   ];
 }
 
-=head2 Character( $ch )
+=head2 Character( $ch ) # 'c'
 
 =cut
 
@@ -69,7 +71,7 @@ method Character( $ch ) {
   ];
 }
 
-=head2 Any( )
+=head2 Any( ) # .
 
 =cut
 
@@ -79,7 +81,7 @@ method Any( ) {
   ];
 }
 
-=head2 Not( )
+=head2 Not( ) # !$p
 
 =cut
 
@@ -92,7 +94,7 @@ method Not( $p ) {
   ];
 }
 
-=head2 Repetition( $p )
+=head2 Repetition( $p ) # $p*
 
 =cut
 
@@ -142,9 +144,7 @@ L<http://search.cpan.org/dist/JGoff-Parser-PEG/>
 
 =back
 
-
 =head1 ACKNOWLEDGEMENTS
-
 
 =head1 LICENSE AND COPYRIGHT
 
@@ -155,7 +155,6 @@ under the terms of either: the GNU General Public License as published
 by the Free Software Foundation; or the Artistic License.
 
 See http://dev.perl.org/licenses/ for more information.
-
 
 =cut
 

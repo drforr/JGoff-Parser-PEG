@@ -1,7 +1,7 @@
 Changes
 lib/JGoff/Parser/PEG.pm
 lib/JGoff/Parser/PEG/VM.pm
-lib/JGoff/Parser/PEG/Core.pm
+lib/JGoff/Parser/PEG/Compile.pm
 Makefile.PL
 MANIFEST			This list of files
 README
