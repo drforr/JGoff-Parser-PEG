@@ -5,13 +5,36 @@ use Moose;                # XXX May be removed later
 use Function::Parameters; # XXX WIll probably be removed later
 use Readonly;
 
-Readonly our $IChar    => 'IChar';
-Readonly our $IEnd     => 'IEnd';
-Readonly our $IGiveup  => 'IGiveup';
-Readonly our $IFail    => 'IFail';
-Readonly our $IAny     => 'IAny';
-Readonly our $TestIAny => 'ITestAny';
-Readonly our $IRet     => 'IRet';
+our $TRACE = 0;
+sub TRACE() { $TRACE }
+
+Readonly our $CHARSETSIZE     => 32; # Extracted from the C source
+Readonly our $CHARSETINSTSIZE => 9;
+
+Readonly our $IAny           => 'IAny'; # fail if no char
+Readonly our $IChar          => 'IChar'; # fail if char != aux
+Readonly our $ISet           => 'ISet'; # fail if char not in buff
+Readonly our $ITestAny       => 'ITestAny'; # if no char, jump to 'offset'
+Readonly our $ITestChar      => 'ITestChar'; # if char != aux, jump to 'offset'
+Readonly our $ITestSet       => 'ITestSet'; # if char not in buff, jump to 'offset'
+Readonly our $ISpan          => 'ISpan'; # read a span of chars in buff
+Readonly our $IBehind        => 'IBehind'; # walk back 'aux' characters (fail if not possible)
+Readonly our $IRet           => 'IRet'; # return from a rule
+Readonly our $IEnd           => 'IEnd'; # end of pattern
+Readonly our $IChoice        => 'IChoice'; # stack a choice; next fail will jump to 'offset'
+Readonly our $IJmp           => 'IJmp'; # jump to 'offset'
+Readonly our $ICall          => 'ICall'; # call rule at 'offset'
+Readonly our $IOpenCall      => 'IOpenCall'; # call rule number 'key' (must be closed to a ICall)
+Readonly our $ICommit        => 'ICommit'; # pop choice and jump to 'offset'
+Readonly our $IPartialCommit => 'IPartialCommit'; # update top choice to current position and jump
+Readonly our $IBackCommit    => 'IBackCommit'; # "fails" but jump to its own 'offset'
+Readonly our $IFailTwice     => 'IFailTwice'; # pop one choice and then fail
+Readonly our $IFail          => 'IFail'; # go back to saved state on choice and jump to saved offset
+Readonly our $IGiveup        => 'IGiveup'; # internal use
+Readonly our $IFullCapture   => 'IFullCapture'; # complete capture of last 'off' chars
+Readonly our $IOpenCapture   => 'IOpenCapture'; # start a capture
+Readonly our $ICloseCapture  => 'ICloseCapture'; # close a capture
+Readonly our $ICloseRunTime  => 'ICloseRunTime'; # Close runtime
 
 =head1 NAME
 
@@ -50,73 +73,149 @@ if you don't export anything, such as for a purely object-oriented module.
 
 # {{{ run ( $op, $s )
 
-method _push ( $e, %arguments ) {
-  push @{ $e }, { %arguments };
-}
-
 method run ( $op, $s ) {
   my $e = [ ];
   my $i = 0;
   my $pc = 0;
 
-  $self->_push( $e, p => { opcode => $IGiveup } );
+  push @{ $e }, { p => { opcode => $IGiveup } };
 
   my $p;
+  my $result;
+
+if ( TRACE ) {
+  warn "Tracing on:\n";
+}
 
 my $count = 10;
-  my $error;
   while ( 1 ) {
 last unless $count--;
     my $fail = undef;
     my $opcode = defined $p ? $p->{opcode} : $op->[ $pc ]->{opcode};
+
+if ( TRACE ) {
+  warn "$opcode\n";
+}
+
+    if ( $opcode eq $IAny ) {
+      if ( $i < length( $s ) ) {
+        $pc++; $i++;
+        next;
+      }
+      else {
+        $fail = 1;
+      }
+    }
+    if ( $opcode eq $IChar ) {
+      if ( substr( $s, $i, 1 ) eq $op->[ $pc ]->{aux} ) {
+        $pc++; $i++;
+        next;
+      }
+      else {
+        $fail = 1;
+      }
+    }
+    if ( $opcode eq $ISet ) {
+      my $c = substr( $s, $i, 1 );
+      if ( $op->[ $pc + 1 ]->{buff} eq $c && $i < length( $s ) ) {
+        $pc += $CHARSETINSTSIZE;
+        $i++;
+        next;
+      }
+      else {
+        $fail = 1;
+      }
+    }
+    if ( $opcode eq $ITestAny ) {
+      if ( $i < length( $s ) ) {
+        $pc++;
+        $i++;
+      }
+      else {
+        $pc += $op->[ $pc + 1 ]->{offset};
+      }
+      next;
+    }
+    if ( $opcode eq $ITestChar ) {
+      if ( substr( $s, $i, 1 ) eq $op->[ $pc ]->{aux} && $i < length( $s ) ) {
+        $pc += 2;
+      }
+      else {
+        $pc += $op->[ $pc + 1 ]->{offset};
+      }
+      next;
+    }
+    if ( $opcode eq $ITestSet ) {
+      my $c = substr( $s, $i, 1 );
+      if ( $op->[ $pc + 2 ]->{buff} eq $c && $i < length( $s ) ) {
+        $pc += 1 + $CHARSETINSTSIZE;
+      }
+      else {
+        $pc += $op->[ $pc + 1 ]->{offset};
+      }
+      next;
+    }
+    if ( $opcode eq $ISpan ) {
+    }
+    if ( $opcode eq $IBehind ) {
+    }
+    if ( $opcode eq $IRet ) {
+    }
     if ( $opcode eq $IEnd ) {
       if ( @{ $e } <= 0 ) {
         die "$IEnd: Stack depth < 1!\n";
       }
+      $result = $i + 1; # XXX Potentially ugly
       last;
     }
-    elsif ( $opcode eq $IGiveup ) {
-      $error = 1;
-      last;
+    if ( $opcode eq $IChoice ) {
+      push @{ $e }, {
+        pc => $pc + $op->[ $pc + 1 ]->{offset},
+        i => $i,
+      };
+      $pc += 2;
+      next;
     }
-    elsif ( $opcode eq $IChar ) {
-      if ( substr( $s, $i, 1 ) eq $op->[ $pc ]->{aux} ) {
-        $pc++; $i++;
-      }
-      else {
-        $fail = 1;
-      }
+    if ( $opcode eq $IJmp ) {
+      $pc += $op->[ $pc + 1 ]->{offset};
     }
-    elsif ( $opcode eq $IFail ) {
+    if ( $opcode eq $ICall ) {
+      push @{ $e }, {
+        pc => $pc + 2,
+        i => -1, # XXX
+      };
+      $pc += $op->[ $pc + 1 ]->{offset};
+    }
+    if ( $opcode eq $IOpenCall ) {
+    }
+    if ( $opcode eq $ICommit ) {
+      pop @{ $e };
+      $pc += $op->[ $pc + 1 ]->{offset};
+      next;
+    }
+    if ( $opcode eq $IPartialCommit ) {
+    }
+    if ( $opcode eq $IBackCommit ) {
+    }
+    if ( $opcode eq $IFailTwice ) {
+      pop @{ $e };
       $fail = 1;
     }
-    elsif ( $opcode eq $IAny ) {
-      if ( $i < length( $s ) ) {
-        $pc++; $i++;
-      }
-      else {
-        $fail = 1;
-      }
+    if ( $opcode eq $IFail ) {
+      $fail = 1;
     }
-
-#    elsif ( $opcode eq $ITestAny ) {
-#      if ( $i < length( $s ) {
-#        $pc += 2;
-#      }
-#      else {
-#        $pc += $e->[ $pc + 1 ]->{offset};
-#      }
-#    }
-#    elsif ( $opcode eq $IRet ) {
-#      pop @{ $e };
-#      $pc = $e->[ -1 ]->{pc};
-#    }
-#    elsif ( $opcode eq $IChoice ) {
-#      $e->[ -1 ]->{pc} = $pc + $op->[ $pc + 1 ]->{offset};
-#      $e->[ -1 ]->{i} = $i;
-##      $e->[ -1 ]->{caplevel} = $caplevel;
-#      $
-#    }
+    if ( $opcode eq $IGiveup ) {
+      $result = undef;
+      last;
+    }
+    if ( $opcode eq $IFullCapture ) {
+    }
+    if ( $opcode eq $IOpenCapture ) {
+    }
+    if ( $opcode eq $ICloseCapture ) {
+    }
+    if ( $opcode eq $ICloseRunTime ) {
+    }
 
     if ( $fail ) {
       while ( !defined( $s ) ) {
@@ -127,7 +226,7 @@ last unless $count--;
       next;
     }
   }
-  return !$error;
+  return $result;
 }
 
 # }}}

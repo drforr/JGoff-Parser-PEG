@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 13;
+use Test::More tests => 20;
 
 BEGIN {
   use_ok( 'JGoff::Parser::PEG' ) || print "Bail out!\n";
@@ -56,11 +56,13 @@ is_deeply
     [ Char => 'a' ]
   ];
 
+# assert(m.match(m.P(true) * "a", "a") == 2)
 { my $vm = JGoff::Parser::PEG::VM->new;
-  ok( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IChar,
+  is( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IChar,
                     aux => 'a' },
                   { opcode => $JGoff::Parser::PEG::VM::IEnd } ],
-                'a' ) );
+                'a' ),
+      2 );
 }
 
 { my $vm = JGoff::Parser::PEG::VM->new;
@@ -71,19 +73,58 @@ is_deeply
 }
 
 { my $vm = JGoff::Parser::PEG::VM->new;
-  ok( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IAny },
+  is( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IAny },
                   { opcode => $JGoff::Parser::PEG::VM::IAny },
                   { opcode => $JGoff::Parser::PEG::VM::IAny },
                   { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
-                'aaa' ) );
+                'aaa' ),
+      4 );
 }
 
 { my $vm = JGoff::Parser::PEG::VM->new;
-  ok( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IAny },
+  is( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IAny },
+                  { opcode => $JGoff::Parser::PEG::VM::IAny },
+                  { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
+                'aaa' ),
+      3 );
+}
+
+{ my $vm = JGoff::Parser::PEG::VM->new;
+  is( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IChar,
+                    aux => 'a' },
+                  { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
+                'alo' ),
+      2 );
+}
+
+{ my $vm = JGoff::Parser::PEG::VM->new;
+  is( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IChar,
+                    aux => 'a' },
+                  { opcode => $JGoff::Parser::PEG::VM::IChar,
+                    aux => 'l' },
+                  { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
+                'alo' ),
+      3 );
+}
+
+{ my $vm = JGoff::Parser::PEG::VM->new;
+  ok( !$vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IChar,
+                     aux => 'a' },
+                   { opcode => $JGoff::Parser::PEG::VM::IChar,
+                     aux => 'l' },
+                   { opcode => $JGoff::Parser::PEG::VM::IChar,
+                     aux => 'u' },
+                   { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
+                 'alo' ) );
+}
+
+{ my $vm = JGoff::Parser::PEG::VM->new;
+  is( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IAny },
                   { opcode => $JGoff::Parser::PEG::VM::IAny },
                   { opcode => $JGoff::Parser::PEG::VM::IAny },
                   { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
-                'aaaa' ) );
+                'aaaa' ),
+      4 );
 }
 
 { my $vm = JGoff::Parser::PEG::VM->new;
@@ -92,6 +133,32 @@ is_deeply
                    { opcode => $JGoff::Parser::PEG::VM::IAny },
                    { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
                  'aa' ) );
+}
+
+{ my $vm = JGoff::Parser::PEG::VM->new;
+local $JGoff::Parser::PEG::VM::TRACE = 1;
+  is( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::ITestChar,
+                    aux => 'a' },
+                  { opcode => $JGoff::Parser::PEG::VM::ITestAny,
+                    offset => 3 }, # XXX Why?... And why on the next inst?
+                  { opcode => $JGoff::Parser::PEG::VM::IAny },
+                  { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
+                'b' ),
+      1 );
+}
+
+{ my $vm = JGoff::Parser::PEG::VM->new;
+  ok( !$vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IFail },
+                   { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
+                 'a' ) );
+}
+
+{ my $vm = JGoff::Parser::PEG::VM->new;
+  ok( !$vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IChar,
+                     aux => 'a' },
+                   { opcode => $JGoff::Parser::PEG::VM::IFail },
+                   { opcode => $JGoff::Parser::PEG::VM::IEnd } ],
+                 'a' ) );
 }
 
 #{ my $vm = JGoff::Parser::PEG::VM->new;
