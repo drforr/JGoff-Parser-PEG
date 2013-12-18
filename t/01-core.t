@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 20;
+use Test::More tests => 999;
 
 BEGIN {
   use_ok( 'JGoff::Parser::PEG' ) || print "Bail out!\n";
@@ -14,176 +14,223 @@ BEGIN {
 use strict;
 use warnings;
 
-my $compiler = JGoff::Parser::PEG::Compile->new;
+my $vm = JGoff::Parser::PEG::VM->new;
 
-# .
-is_deeply $compiler->Any => [ [ 'Any' ] ];
+is( $vm->run( [ { opcode => 'IChar', aux => 'a' },
+                { opcode => 'IEnd' },
+              ],
+              q{a} ),
+    1
+);
 
-# 'C'
-is_deeply $compiler->Character( 'C' ) => [ [ Char => 'C' ] ];
+is( $vm->run( [ { opcode => 'IEnd' },
+              ],
+              q{a} ),
+    0
+);
 
-# 'A' 'n'
-is_deeply
-  $compiler->Concatenate(
-    $compiler->Character( 'A' ),
-    $compiler->Character( 'n' ) ) =>
-  [ [ Char => 'A' ],
-    [ Char => 'n' ]
-  ];
+is( $vm->run( [ { opcode => 'IChar', aux => 'a' },
+                { opcode => 'IEnd' },
+              ],
+              q{b} ),
+    undef
+);
 
-# 'A' / 'n'
-is_deeply
-  $compiler->Ordered_Choice(
-    $compiler->Character( 'A' ),
-    $compiler->Character( 'n' ) ) =>
-  [ [ Choice => 3 ],
-    [ Char => 'A' ],
-    [ Commit => 2 ],
-    [ Char => 'n' ]
-  ];
+is( $vm->run( [ { opcode => 'ITestChar', aux => 'a' }, # ( next offset: 3)
+                { opcode => 'ITestAny', offset => 3 }, # (next offset: 13828096)
+                { opcode => 'IAny' },
+                { opcode => 'IEnd' },
+              ],
+              q{b} ),
+    0
+);
 
-# (an|a)
-is_deeply
-  $compiler->Ordered_Choice(
-    $compiler->Concatenate(
-      $compiler->Character( 'a' ),
-      $compiler->Character( 'n' ) ),
-    $compiler->Character( 'a' ) ) =>
-  [ [ Choice => 4 ], # --\
-    [ Char => 'a' ], #   |
-    [ Char => 'n' ], #   |
-    [ Commit => 2 ], # <-/
-    [ Char => 'a' ]
-  ];
+is( $vm->run( [ { opcode => 'IFail' },
+                { opcode => 'IEnd' },
+              ],
+              q{a} ),
+    undef
+);
 
-# assert(m.match(m.P(true) * "a", "a") == 2)
-{ my $vm = JGoff::Parser::PEG::VM->new;
-  is( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IChar,
-                    aux => 'a' },
-                  { opcode => $JGoff::Parser::PEG::VM::IEnd } ],
-                'a' ),
-      2 );
-}
+is( $vm->run( [ { opcode => 'IChar', aux => 'a' },
+                { opcode => 'IEnd' },
+              ],
+              q{a} ),
+    1
+);
 
-{ my $vm = JGoff::Parser::PEG::VM->new;
-  ok( !$vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IChar,
-                     aux => 'a' },
-                   { opcode => $JGoff::Parser::PEG::VM::IEnd } ],
-                 'b' ) );
-}
+is( $vm->run( [ { opcode => 'IChar', aux => 'a' },
+                { opcode => 'IFail' },
+                { opcode => 'IEnd' },
+              ],
+              q{a} ),
+    undef
+);
 
-{ my $vm = JGoff::Parser::PEG::VM->new;
-  is( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IAny },
-                  { opcode => $JGoff::Parser::PEG::VM::IAny },
-                  { opcode => $JGoff::Parser::PEG::VM::IAny },
-                  { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
-                'aaa' ),
-      4 );
-}
+is( $vm->run( [
+    { opcode => 'IFail' },
+    { opcode => 'IChar', aux => 'a' },
+    { opcode => 'IEnd' },
+  ],
+  q{a} ),
+  undef
+);
 
-{ my $vm = JGoff::Parser::PEG::VM->new;
-  is( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IAny },
-                  { opcode => $JGoff::Parser::PEG::VM::IAny },
-                  { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
-                'aaa' ),
-      3 );
-}
+is( $vm->run( [
+    { opcode => 'IChar', aux => 'a' },
+    { opcode => 'IEnd' },
+  ],
+  q{a} ),
+  1
+);
 
-{ my $vm = JGoff::Parser::PEG::VM->new;
-  is( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IChar,
-                    aux => 'a' },
-                  { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
-                'alo' ),
-      2 );
-}
+# is( $vm->run( [
+#     { opcode => 'IOpenCapture' },
+#     { opcode => 'ITestAny', offset => 3 }, # (next offset: 19)
+#     { opcode => 'IGiveup' },
+#     { opcode => 'ITestSet' }, # ( n-next buff: )
+#     { opcode => 'IOpenCall' }, # (next offset: 0)
+#     { opcode => 'IAny' },
+#     { }, # XXX UNKNOWN OPERATION 254
+#     { }, # XXX UNKNOWN OPERATION 255
+#     { }, # XXX UNKNOWN OPERATION 255
+#     { opcode => 'IAny' },
+#     { opcode => 'IAny' },
+#     { opcode => 'IAny' },
+#     { opcode => 'IAny' },
+#     { opcode => 'IAny' },
+#     { opcode => 'IJmp' }, # (next offset: -13)
+#     { }, # XXX UNKNOWN OPERATION 253
+#     { opcode => 'IAny' },
+#     { opcode => 'IOpenCapture' }, # (getoff 1)
+#     { opcode => 'IJmp' }, # (next offset: -17)
+#     { }, # XXX UNKNOWN OPERATION 239
+#     { opcode => 'ICloseCapture' },
+#     { opcode => 'IEnd' },
+#   ],
+#   q{} ),
+#   256
+# );
 
-{ my $vm = JGoff::Parser::PEG::VM->new;
-  is( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IChar,
-                    aux => 'a' },
-                  { opcode => $JGoff::Parser::PEG::VM::IChar,
-                    aux => 'l' },
-                  { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
-                'alo' ),
-      3 );
-}
+is( $vm->run( [
+    { opcode => 'IAny', offset => 0 },
+    { opcode => 'IAny', offset => 0 },
+    { opcode => 'IAny', offset => 0 },
+    { opcode => 'IEnd' },
+  ],
+  q{aaaa} ),
+  3
+);
 
-{ my $vm = JGoff::Parser::PEG::VM->new;
-  ok( !$vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IChar,
-                     aux => 'a' },
-                   { opcode => $JGoff::Parser::PEG::VM::IChar,
-                     aux => 'l' },
-                   { opcode => $JGoff::Parser::PEG::VM::IChar,
-                     aux => 'u' },
-                   { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
-                 'alo' ) );
-}
+is( $vm->run( [
+    { opcode => 'IAny', offset => 335675392 },
+    { opcode => 'IAny', offset => 0 },
+    { opcode => 'IAny', offset => 23068672 },
+    { opcode => 'IAny', offset => 0 },
+    { opcode => 'IEnd' },
+  ],
+  q{aaaa} ),
+  4
+);
 
-{ my $vm = JGoff::Parser::PEG::VM->new;
-  is( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IAny },
-                  { opcode => $JGoff::Parser::PEG::VM::IAny },
-                  { opcode => $JGoff::Parser::PEG::VM::IAny },
-                  { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
-                'aaaa' ),
-      4 );
-}
+is( $vm->run( [
+    { opcode => 'IAny', offset => 0 },
+    { opcode => 'IAny', offset => 0 },
+    { opcode => 'IAny', offset => 23068672 },
+    { opcode => 'IAny', offset => 0 },
+    { opcode => 'IAny', offset => 0 },
+    { opcode => 'IEnd' },
+  ],
+  q{aaaa} ),
+  undef
+);
 
-{ my $vm = JGoff::Parser::PEG::VM->new;
-  ok( !$vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IAny },
-                   { opcode => $JGoff::Parser::PEG::VM::IAny },
-                   { opcode => $JGoff::Parser::PEG::VM::IAny },
-                   { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
-                 'aa' ) );
-}
+is( $vm->run( [
+      { opcode => 'ITestAny', offset => 3 }, # (next offset: 8)
+      { opcode => 'IRet', offset => 8 }, # XXX added
+      { opcode => 'IChoice' },
+      { opcode => 'ISpan', offset => 6 }, # ( next buff: )
+      { opcode => 'IAny', offset => 0 },
+      { opcode => 'IAny', offset => 0 },
+      { opcode => 'IAny', offset => 0 },
+      { opcode => 'IFailTwice' },
+      { opcode => 'IEnd' },
+    ],
+    q{aa} ),
+   0
+);
 
-{ my $vm = JGoff::Parser::PEG::VM->new;
-local $JGoff::Parser::PEG::VM::TRACE = 1;
-  is( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::ITestChar,
-                    aux => 'a' },
-                  { opcode => $JGoff::Parser::PEG::VM::ITestAny,
-                    offset => 3 }, # XXX Why?... And why on the next inst?
-                  { opcode => $JGoff::Parser::PEG::VM::IAny },
-                  { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
-                'b' ),
-      1 );
-}
+#is( $vm->run( [
+#      { opcode => 'ITestAny', offset => 29097987 }, # (next offset: 8)
+#      { opcode => 'IRet', offset => 8 },
+#      { opcode => 'IChoice' },
+#      { opcode => 'ISpan', offset => 6 }, # ( next buff: )
+#      { opcode => 'IAny', offset => 0 },
+#      { opcode => 'IAny', offset => 0 },
+#      { opcode => 'IAny', offset => 0 },
+#      { opcode => 'IFailTwice' },
+#      { opcode => 'IEnd' },
+#    ],
+#    q{aaa} ),
+#  undef
+#);
 
-{ my $vm = JGoff::Parser::PEG::VM->new;
-  ok( !$vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IFail },
-                   { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
-                 'a' ) );
-}
-
-{ my $vm = JGoff::Parser::PEG::VM->new;
-  ok( !$vm->run( [ { opcode => $JGoff::Parser::PEG::VM::IChar,
-                     aux => 'a' },
-                   { opcode => $JGoff::Parser::PEG::VM::IFail },
-                   { opcode => $JGoff::Parser::PEG::VM::IEnd } ],
-                 'a' ) );
-}
-
-#{ my $vm = JGoff::Parser::PEG::VM->new;
-#  ok( $vm->run( [ { opcode => $JGoff::Parser::PEG::VM::ITestAny,
-#                    offset => 3 },
-#                  { opcode => $JGoff::Parser::PEG::VM::IRet },
-#                  { opcode => $JGoff::Parser::PEG::VM::IChoice },
-#                  { opcode => $JGoff::Parser::PEG::VM::ISpan },
-#                  { opcode => $JGoff::Parser::PEG::VM::IAny },
-#                  { opcode => $JGoff::Parser::PEG::VM::IAny },
-#                  { opcode => $JGoff::Parser::PEG::VM::IAny },
-#                  { opcode => $JGoff::Parser::PEG::VM::IFailTwice },
-#                  { opcode => $JGoff::Parser::PEG::VM::IEnd }, ],
-#                'aa' ) );
+#{ local $JGoff::Parser::PEG::VM::TRACE = 1;
+#is( $vm->run( [
+#      { opcode => 'ITestAny', offset => 31457283 }, # (next offset: 8)
+#      { opcode => 'IRet', offset => 8 },
+#      { opcode => 'IChoice' }, # (next offset: 6)
+#      { opcode => 'ISpan', offset => 6 }, # (next buff: )
+#      { opcode => 'IAny', offset => 31457280 },
+#      { opcode => 'IAny', offset => 0 },
+#      { opcode => 'IAny', offset => 0 },
+#      { opcode => 'IFailTwice' },
+#      { opcode => 'IEnd' },
+#    ],
+#    q{aaaa} ),
+#  undef
+#);
 #}
 
-#{ my $vm = JGoff::Parser::PEG::VM->new;
-#  $vm->run(
-#    $compiler->Ordered_Choice(
-#      $compiler->Concatenate(
-#        $compiler->Character( 'a' ),
-#        $compiler->Character( 'n' ) ),
-#      $compiler->Character( 'a' ) ) =>
-#    #[ 'A', 'n' ] );
-#    #[ 'a', 'n' ] );
-#    [ 'a', 'd' ] );
-#    #[ 'a' ] );
-#}
+
+### my $compiler = JGoff::Parser::PEG::Compile->new;
+### 
+### # .
+### is_deeply $compiler->Any => [ [ 'Any' ] ];
+### 
+### # 'C'
+### is_deeply $compiler->Character( 'C' ) => [ [ Char => 'C' ] ];
+### 
+### # 'A' 'n'
+### is_deeply
+###   $compiler->Concatenate(
+###     $compiler->Character( 'A' ),
+###     $compiler->Character( 'n' ) ) =>
+###   [ [ Char => 'A' ],
+###     [ Char => 'n' ]
+###   ];
+### 
+### # 'A' / 'n'
+### is_deeply
+###   $compiler->Ordered_Choice(
+###     $compiler->Character( 'A' ),
+###     $compiler->Character( 'n' ) ) =>
+###   [ [ Choice => 3 ],
+###     [ Char => 'A' ],
+###     [ Commit => 2 ],
+###     [ Char => 'n' ]
+###   ];
+### 
+### # (an|a)
+### is_deeply
+###   $compiler->Ordered_Choice(
+###     $compiler->Concatenate(
+###       $compiler->Character( 'a' ),
+###       $compiler->Character( 'n' ) ),
+###     $compiler->Character( 'a' ) ) =>
+###   [ [ Choice => 4 ], # --\
+###     [ Char => 'a' ], #   |
+###     [ Char => 'n' ], #   |
+###     [ Commit => 2 ], # <-/
+###     [ Char => 'a' ]
+###   ];
