@@ -126,13 +126,11 @@ method run ( $op, $s ) {
   my $i = 0;
   my $pc = 0;
 
-  push @{ $e }, { pc => -1, i => $NULL }; # XXX Fake a 'IGiveup' instruction.
+  push @{ $e }, { pc => -1, i => 0 }; # XXX Fake a 'IGiveup' instruction.
 
   my $result;
 
-if ( TRACE ) {
-  warn "Tracing on:\n";
-}
+warn "Tracing on:\n" if TRACE;
 
 my $count = 100;
   CONTINUE: while ( 1 ) {
@@ -141,13 +139,11 @@ last unless $count--;
     my ( $fail, $pushcapture );
     my $opcode = $pc == -1 ? $IGiveup : $op->[ $pc ]->{opcode};
 
-if ( TRACE ) {
-  warn "$opcode\n";
-}
+TRACE and warn "$opcode\n";
 
     if ( $opcode eq $IAny ) {
-      TRACE > 1 and warn "IAny: i: $i\n";
-      if ( $i < length( $s ) ) {
+#TRACE > 1 and warn "IAny: i: $i\n";
+      if ( $i <= length( $s ) ) {
 TRACE > 2 and warn "IAny: if() branch\n";
         $pc++;
         $i++;
@@ -158,7 +154,7 @@ TRACE > 2 and warn "IAny: else{} branch\n";
         $fail = 1;
       }
     }
-    if ( $opcode eq $IChar ) {
+    elsif ( $opcode eq $IChar ) {
       if ( substr( $s, $i, 1 ) eq $op->[ $pc ]->{aux} ) {
         $pc++; $i++;
         goto CONTINUE;
@@ -167,7 +163,7 @@ TRACE > 2 and warn "IAny: else{} branch\n";
         $fail = 1;
       }
     }
-    if ( $opcode eq $ISet ) {
+    elsif ( $opcode eq $ISet ) {
       my $c = substr( $s, $i, 1 );
       if ( $op->[ $pc + 1 ]->{buff} eq $c && $i < length( $s ) ) {
         $pc += $CHARSETINSTSIZE;
@@ -178,7 +174,7 @@ TRACE > 2 and warn "IAny: else{} branch\n";
         $fail = 1;
       }
     }
-    if ( $opcode eq $ITestAny ) {
+    elsif ( $opcode eq $ITestAny ) {
       if ( $i < length( $s ) ) {
         $pc += 2;
       }
@@ -187,7 +183,7 @@ TRACE > 2 and warn "IAny: else{} branch\n";
       }
       goto CONTINUE;
     }
-    if ( $opcode eq $ITestChar ) {
+    elsif ( $opcode eq $ITestChar ) {
       if ( substr( $s, $i, 1 ) eq $op->[ $pc ]->{aux} && $i < length( $s ) ) {
         $pc += 2;
       }
@@ -196,7 +192,7 @@ TRACE > 2 and warn "IAny: else{} branch\n";
       }
       goto CONTINUE;
     }
-    if ( $opcode eq $ITestSet ) {
+    elsif ( $opcode eq $ITestSet ) {
       my $c = substr( $s, $i, 1 );
       if ( $op->[ $pc + 2 ]->{buff} eq $c && $i < length( $s ) ) {
         $pc += 1 + $CHARSETINSTSIZE;
@@ -206,106 +202,106 @@ TRACE > 2 and warn "IAny: else{} branch\n";
       }
       goto CONTINUE;
     }
-    if ( $opcode eq $ISpan ) {
-die "Operation $ISpan not implemented yet!\n";
+    elsif ( $opcode eq $ISpan ) {
+#die "Operation $ISpan not implemented yet!\n";
       for ( ; $i < length( $s ) ; $i++ ) {
         last if substr( $s, $i, 1 ) eq $op->[ $pc + 1 ]->{buff};
       }
       $pc += $CHARSETINSTSIZE;
     }
-    if ( $opcode eq $IBehind ) {
+    elsif ( $opcode eq $IBehind ) {
 die "Operation $IBehind not implemented yet!\n";
     }
-    if ( $opcode eq $IRet ) {
+    elsif ( $opcode eq $IRet ) {
       if ( @{ $e } <= 0 ) {
         die "$IRet: Stack depth < 1!\n";
       }
       if ( !defined( $e->[-1]->{i} ) ) {
-        TRACE > 1 and $self->__print_stack( $e );
+if( TRACE > 2 ) { use YAML; warn "Ret:\n" . Dump( $e ) }
         die "$IRet: Stack N-1 does not have a string!\n";
       }
       my $top = pop @{ $e };
       $pc = $top->{pc};
     }
-    if ( $opcode eq $IEnd ) {
+    elsif ( $opcode eq $IEnd ) {
       if ( @{ $e } <= 0 ) {
         die "$IEnd: Stack depth < 1!\n";
       }
       $result = $i;
       last;
     }
-    if ( $opcode eq $IChoice ) {
-if( TRACE > 2 ) { warn ">:\n" . $self->__print_stack( $e ) }
+    elsif ( $opcode eq $IChoice ) {
+if( TRACE > 2 ) { use YAML; warn ">:\n" . Dump( $e ) }
       push @{ $e }, {
         pc => $pc + $op->[ $pc + 1 ]->{offset},
         i => $i,
       };
-if( TRACE > 2 ) { warn "<:\n" . $self->__print_stack( $e ) }
+if( TRACE > 2 ) { use YAML; warn "<:\n" . Dump( $e ) }
       $pc += 2;
       goto CONTINUE;
     }
-    if ( $opcode eq $IJmp ) {
+    elsif ( $opcode eq $IJmp ) {
       $pc += $op->[ $pc + 1 ]->{offset};
     }
-    if ( $opcode eq $ICall ) {
+    elsif ( $opcode eq $ICall ) {
       push @{ $e }, {
         pc => $pc + 2,
         i => -1, # XXX
       };
       $pc += $op->[ $pc + 1 ]->{offset};
     }
-    if ( $opcode eq $IOpenCall ) {
-#die "Operation $IOpenCall not implemented yet!\n";
+    elsif ( $opcode eq $IOpenCall ) {
+die "Operation $IOpenCall not implemented yet!\n";
     }
     if ( $opcode eq $ICommit ) {
       pop @{ $e };
       $pc += $op->[ $pc + 1 ]->{offset};
       goto CONTINUE;
     }
-    if ( $opcode eq $IPartialCommit ) {
+    elsif ( $opcode eq $IPartialCommit ) {
       $e->[ -1 ]->{i} = $i;
       $pc += $op->[ $pc + 1 ]->{offset};
     }
-    if ( $opcode eq $IBackCommit ) {
+    elsif ( $opcode eq $IBackCommit ) {
       my $top = pop @{ $e };
       $i = $top->{i};
       $pc += $op->[ $pc + 1 ]->{offset};
 #die "Operation $IBackCommit not implemented yet!\n";
     }
-    if ( $opcode eq $IFailTwice ) {
+    elsif ( $opcode eq $IFailTwice ) {
       pop @{ $e };
       $fail = 1;
     }
-    if ( $opcode eq $IFail ) {
+    elsif ( $opcode eq $IFail ) {
       $fail = 1;
     }
-    if ( $opcode eq $IGiveup ) {
+    elsif ( $opcode eq $IGiveup ) {
       $result = undef;
       last;
     }
-    if ( $opcode eq $IFullCapture ) {
+    elsif ( $opcode eq $IFullCapture ) {
 die "Operation $IFullCapture not implemented yet!\n";
     }
-    if ( $opcode eq $IOpenCapture ) {
+    elsif ( $opcode eq $IOpenCapture ) {
 die "Operation $IOpenCapture not implemented yet!\n";
     }
-    if ( $opcode eq $ICloseCapture ) {
+    elsif ( $opcode eq $ICloseCapture ) {
 die "Operation $ICloseCapture not implemented yet!\n";
     }
-    if ( $opcode eq $ICloseRunTime ) {
+    elsif ( $opcode eq $ICloseRunTime ) {
 die "Operation $ICloseRunTime not implemented yet!\n";
     }
 
     if ( $fail ) {
       $fail = undef;
-$self->__print_stack( $e ) if TRACE > 1;
+if( TRACE > 1 ) { use YAML; warn "|:\n" . Dump( $e ) }
       my $top;
-      while( $e->[-1]->{i} != $NULL ) {
+      while ( @{ $e } and $e->[-1]->{i} != $NULL ) {
         $top = pop @{ $e };
         $i = $top->{i};
       }
       $pc = $top->{pc} if defined $top;
-$self->__print_stack( $e ) if TRACE > 1;
+if( TRACE > 1 ) { use YAML; warn "|:\n" . Dump( $e ) }
       goto CONTINUE;
     }
     if ( $pushcapture ) {

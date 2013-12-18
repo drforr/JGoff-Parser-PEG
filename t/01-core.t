@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 999;
+use Test::More tests => 17;
 
 BEGIN {
   use_ok( 'JGoff::Parser::PEG' ) || print "Bail out!\n";
@@ -145,35 +145,57 @@ is( $vm->run( [
   undef
 );
 
-is( $vm->run( [
-      { opcode => 'ITestAny', offset => 3 }, # (next offset: 8)
-      { opcode => 'IRet', offset => 8 }, # XXX added
-      { opcode => 'IChoice' },
-      { opcode => 'ISpan', offset => 6 }, # ( next buff: )
-      { opcode => 'IAny', offset => 0 },
-      { opcode => 'IAny', offset => 0 },
-      { opcode => 'IAny', offset => 0 },
-      { opcode => 'IFailTwice' },
-      { opcode => 'IEnd' },
-    ],
-    q{aa} ),
-   0
-);
+#       ITestAny: pc:    0 i:     0 *s: a (97)
+#       ITestAny: s < e
+#        IChoice: pc:    2 i:     0 *s: a delta-e: 1
+#           IAny: pc:    4 i:     0 *s: a (97)
+#           IAny: pc:    5 i:     1 *s: a (97)
+#           IAny: pc:    6 i:     2 *s:  (0)
+# >>> stack->s: not NULL
+#           IEnd:
+# Returning s - o: 0
 
-#is( $vm->run( [
-#      { opcode => 'ITestAny', offset => 29097987 }, # (next offset: 8)
-#      { opcode => 'IRet', offset => 8 },
-#      { opcode => 'IChoice' },
-#      { opcode => 'ISpan', offset => 6 }, # ( next buff: )
-#      { opcode => 'IAny', offset => 0 },
-#      { opcode => 'IAny', offset => 0 },
-#      { opcode => 'IAny', offset => 0 },
-#      { opcode => 'IFailTwice' },
-#      { opcode => 'IEnd' },
-#    ],
-#    q{aaa} ),
-#  undef
-#);
+{ local $JGoff::Parser::PEG::VM::TRACE = 2;
+  is( $vm->run( [
+        { opcode => 'ITestAny', offset => 3 }, # (next offset: 8)
+        { opcode => 'IRet', offset => 8 }, # XXX added
+        { opcode => 'IChoice' }, # (next offset: 6)
+        { opcode => 'ISpan', offset => 6 }, # ( next buff: )
+        { opcode => 'IAny', offset => 0, buff => "\0" },
+        { opcode => 'IAny', offset => 0, buff => "\0" },
+        { opcode => 'IAny', offset => 0, buff => "\0" },
+        { opcode => 'IFailTwice' },
+        { opcode => 'IEnd' },
+      ],
+      q{aa} ),
+     0
+  );
+} 
+
+#   ITestAny: pc:    0 i:     0 *s: a (97) ( s < e )
+#    IChoice: pc:    2 i:     0 *s: a delta-e: 1
+#       IAny: pc:    4 i:     0 *s: a (97)
+#       IAny: pc:    5 i:     1 *s: a (97)
+#       IAny: pc:    6 i:     2 *s: a (97)
+# IFailTwice: pc:    7 i:     3 *s:  delta-e: 2
+#    IGiveup
+
+{ # local $JGoff::Parser::PEG::VM::TRACE = 2;
+  is( $vm->run( [
+        { opcode => 'ITestAny', offset => 29097987 }, # (next offset: 8)
+        { opcode => 'IRet', offset => 8 },
+        { opcode => 'IChoice' },
+        { opcode => 'ISpan', offset => 6 }, # ( next buff: )
+        { opcode => 'IAny', offset => 0, buff => "\0" },
+        { opcode => 'IAny', offset => 0, buff => "\0" },
+        { opcode => 'IAny', offset => 0, buff => "\0" },
+        { opcode => 'IFailTwice' },
+        { opcode => 'IEnd' },
+      ],
+      q{aaa} ),
+    undef
+  );
+}
 
 #{ local $JGoff::Parser::PEG::VM::TRACE = 1;
 #is( $vm->run( [
