@@ -45,12 +45,14 @@ is( $vm->run( [ { opcode => 'ITestChar', aux => 'a' }, # ( next offset: 3)
     0
 );
 
-is( $vm->run( [ { opcode => 'IFail' },
-                { opcode => 'IEnd' },
-              ],
-              q{a} ),
-    undef
-);
+{ # local $JGoff::Parser::PEG::VM::TRACE = 1;
+  is( $vm->run( [ { opcode => 'IFail' },
+                  { opcode => 'IEnd' },
+                ],
+                q{a} ),
+      undef
+  );
+}
 
 is( $vm->run( [ { opcode => 'IChar', aux => 'a' },
                 { opcode => 'IEnd' },
@@ -155,7 +157,7 @@ is( $vm->run( [
 #           IEnd:
 # Returning s - o: 0
 
-{ local $JGoff::Parser::PEG::VM::TRACE = 2;
+{ # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
         { opcode => 'ITestAny', offset => 3 }, # (next offset: 8)
         { opcode => 'IRet', offset => 8 }, # XXX added
