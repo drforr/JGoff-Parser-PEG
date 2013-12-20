@@ -129,7 +129,7 @@ method run ( $op, $s ) {
   my $pc = 0;
 
 TRACE > 1 and warn "Initial: ".Dump($e);
-  push @{ $e }, { pc => -1, i => -1 }; # XXX Fake a 'IGiveup' instruction.
+  $e = [ { pc => -1, i => 0 } ]; # XXX Fake a 'IGiveup' instruction.
   $stack++;
 TRACE > 1 and warn "After: ".Dump($e);
 
