@@ -478,7 +478,7 @@ Perhaps a little code snippet.
     use JGoff::Parser::PEG::VM;
 
     my $foo = JGoff::Parser::PEG::VM->new;
-    $foo->run( [ $tuple1, $tuple2, ... ], [ 'A', 'n', 'd' ] );
+    $foo->run( [ $tuple1, $tuple2, ... ], q{And} );
     ...
 
 =head1 EXPORT
@@ -503,7 +503,8 @@ fun getoffset ( $op, $pc ) {
 fun testchar ( $opcode, $pc, $st, $c ) {
   my $c_ord = ord( $c );
   my $rv = $st->[ $c_ord >> 3 ] & ( 1 << ( $c_ord & 7 ) );
-  TRACE1( $opcode, $pc, "(c >> 3 = %d, 1 << (c & 7) = %d, buff = [0x%02x]) => %d\n",
+  TRACE1( $opcode, $pc,
+          "(c >> 3 = %d, 1 << (c & 7) = %d, buff = [0x%02x]) => %d\n",
           $c_ord >> 3, 1 << ( $c_ord & 7 ), $st->[ $c_ord >> 3 ], $rv );
   return $rv;
 }
@@ -529,7 +530,7 @@ my $count = 100;
 my $fail_count = 10;
 die "*** Too many iterations of while()!" unless $count--;
     my ( $fail, $pushcapture );
-    die "*** PC past the end of opcode array ($pc)!\n"
+    ASSERT( '', "PC $pc past the end of opcode array!" )
       if $pc > $#{ $op };
     my $opcode = $pc == -1 ? $IGiveup : $op->[ $pc ]->{opcode};
 
@@ -554,6 +555,7 @@ die "*** Too many iterations of while()!" unless $count--;
       TRACE1( $IRet, $pc, ">> %s", Dump( $e ) );
       $pc = $e->[ --$stack ]->{pc};
       TRACE1( $IRet, $pc, "<< %s", Dump( $e ) );
+      goto CONTINUE;
     }
     elsif ( $opcode eq $IAny ) {
       if ( $i < length( $s ) ) {
@@ -608,7 +610,8 @@ die "*** Too many iterations of while()!" unless $count--;
     }
     elsif ( $opcode eq $ISet ) {
       my $c = substr( $s, $i, 1 );
-      if ( $op->[ $pc + 1 ]->{buff} eq $c && $i < length( $s ) ) {
+      if ( testchar( $ITestSet, $pc,
+                     $op->[ $pc + 1 ]->{buff}, $c ) && $i < length( $s ) ) {
         TRACE1( $ISet, $pc, "s < e" );
         $pc += $CHARSETINSTSIZE;
         $i++;
@@ -635,7 +638,18 @@ die "*** Too many iterations of while()!" unless $count--;
       goto CONTINUE;
     }
     elsif ( $opcode eq $IBehind ) {
-die "Operation $IBehind not implemented yet!\n";
+      my $n = $op->[ $pc ]->{aux};
+      if ( $n > $i ) {
+        TRACE1( $IBehind, $pc, "n > s - o" );
+        $fail = 1;
+        goto FAIL;
+      }
+      else {
+        TRACE1( $IBehind, $pc, "n <= s - o" );
+        $i -= $n;
+        $pc++;
+        goto CONTINUE;
+      }
     }
     elsif ( $opcode eq $ISpan ) {
 #die "Operation $ISpan not implemented yet!\n";
