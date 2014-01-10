@@ -577,7 +577,7 @@ die "*** Too many iterations of while()!" unless $count--;
         TRACE1( $ITestAny, $pc, "(pc => %d)", $pc );
       }
       else {
-        my $offset = $op->[ $pc + 1 ]->{offset};
+        my $offset = getoffset( $op, $pc );
         TRACE1( $ITestAny, $pc, "pc += (pc+1)->offset (%d)", $offset );
         $pc += getoffset( $op, $pc );
       }
@@ -597,20 +597,26 @@ die "*** Too many iterations of while()!" unless $count--;
       }
     }
     elsif ( $opcode eq $ITestChar ) {
-      if ( substr( $s, $i, 1 ) eq $op->[ $pc ]->{aux} && $i < length( $s ) ) {
-        TRACE1( $ITestChar, $pc, "s < e" );
+      TRACE1( $ITestChar, $pc,
+              "[s => '%s', i => %d, *s => '%s', p->i.aux => '%c'] (%d)",
+              $s, $i, substr( $s, $i, 1 ), $op->[ $pc ]->{aux},
+              ( substr( $s, $i, 1 ) eq chr( $op->[ $pc ]->{aux} ) ) ? 1 : 0 );
+      if ( ( substr( $s, $i, 1 ) eq chr( $op->[ $pc ]->{aux} ) ) &&
+           ( $i < length( $s ) ) ) {
+        TRACE1( $ITestChar, $pc,
+                "s < e { \$i (%d) < length(\%s) (%d)", $i, $s, length( $s ) );
         $pc += 2;
       }
       else {
-        my $offset = $op->[ $pc + 1 ]->{offset};
-        TRACE1( $ITestChar, $pc, "pc += (pc+1)->offset (%d)", $offset );
+        my $offset = getoffset( $op, $pc );
+        TRACE1( $ITestChar, $pc, "pc += getoffset(p) (%d)", $offset );
         $pc += getoffset( $op, $pc );
       }
       goto CONTINUE;
     }
     elsif ( $opcode eq $ISet ) {
       my $c = substr( $s, $i, 1 );
-      if ( testchar( $ITestSet, $pc,
+      if ( testchar( $ISet, $pc,
                      $op->[ $pc + 1 ]->{buff}, $c ) && $i < length( $s ) ) {
         TRACE1( $ISet, $pc, "s < e" );
         $pc += $CHARSETINSTSIZE;
