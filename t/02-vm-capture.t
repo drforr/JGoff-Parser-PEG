@@ -16,7 +16,7 @@ use warnings;
 my $vm = JGoff::Parser::PEG::VM->new;
 
 {
-  is( $vm->run( [ { opcode => 'IChar', aux => 'a' },
+  is( $vm->run( [ { opcode => 'IChar', aux => ord( 'a' ) },
                   { opcode => 'IEnd' },
                 ],
                 q{a} ),
@@ -33,7 +33,7 @@ my $vm = JGoff::Parser::PEG::VM->new;
 }
 
 {
-  is( $vm->run( [ { opcode => 'IChar', aux => 'a' },
+  is( $vm->run( [ { opcode => 'IChar', aux => ord( 'a' ) },
                   { opcode => 'IEnd' },
                 ],
                 q{b} ),
@@ -42,7 +42,7 @@ my $vm = JGoff::Parser::PEG::VM->new;
 }
 
 {
-  is( $vm->run( [ { opcode => 'ITestChar', aux => 'a' }, # ( next offset: 3)
+  is( $vm->run( [ { opcode => 'ITestChar', aux => ord( 'a' ) }, # ( next offset: 3)
                   { opcode => 'ITestAny', offset => 3 }, # (next offset: 138096)
                   { opcode => 'IAny' },
                   { opcode => 'IEnd' },
@@ -62,7 +62,7 @@ my $vm = JGoff::Parser::PEG::VM->new;
 }
 
 {
-  is( $vm->run( [ { opcode => 'IChar', aux => 'a' },
+  is( $vm->run( [ { opcode => 'IChar', aux => ord( 'a' ) },
                   { opcode => 'IEnd' },
                 ],
                 q{a} ),
@@ -71,7 +71,7 @@ my $vm = JGoff::Parser::PEG::VM->new;
 }
 
 {
-  is( $vm->run( [ { opcode => 'IChar', aux => 'a' },
+  is( $vm->run( [ { opcode => 'IChar', aux => ord( 'a' ) },
                   { opcode => 'IFail' },
                   { opcode => 'IEnd' },
                 ],
@@ -83,7 +83,7 @@ my $vm = JGoff::Parser::PEG::VM->new;
 {
   is( $vm->run( [
       { opcode => 'IFail' },
-      { opcode => 'IChar', aux => 'a' },
+      { opcode => 'IChar', aux => ord( 'a' ) },
       { opcode => 'IEnd' },
     ],
     q{a} ),
@@ -93,7 +93,7 @@ my $vm = JGoff::Parser::PEG::VM->new;
 
 {
   is( $vm->run( [
-      { opcode => 'IChar', aux => 'a' },
+      { opcode => 'IChar', aux => ord( 'a' ) },
       { opcode => 'IEnd' },
     ],
     q{a} ),

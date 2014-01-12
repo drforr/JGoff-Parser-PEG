@@ -21,58 +21,30 @@ const char *match (lua_State *L, const char *o, const char *s, const char *e,
 
 printf( "*** starting\n" );
 
-#ifdef DISPLAY
-printf( "is( $vm->run( \n" );
-print_instructions(op);
-printf( "  ), q{%s}\n", s );
-printf( ");\n\n" );
-#endif
-
   for (;;) {
-#ifdef TRACE
-trace_instruction( p, op, s, o, stack, stackbase );
-#endif
     assert(stackidx(ptop) + ndyncap == lua_gettop(L) && ndyncap <= captop);
     switch ((Opcode)p->i.code) {
       case IEnd: {
         assert(stack == getstackbase(L, ptop) + 1);
         capture[captop].kind = Cclose;
         capture[captop].s = NULL;
-#ifdef DISPLAY
-printf( "%14s: Returning s - o: %d\n", "IEnd", s - o );
-#endif
         return s;
       }
       case IGiveup: {
         assert(stack == getstackbase(L, ptop));
-#ifdef DISPLAY
-printf( "%14s: Returning NULL\n", "IGiveup" );
-#endif
         return NULL;
       }
       case IRet: {
         assert(stack > getstackbase(L, ptop) && (stack - 1)->s == NULL);
-#ifdef TRACE
-print_stack_items( stack, stackbase );
-#endif
         p = (--stack)->p;
-#ifdef TRACE
-print_stack_items( stack, stackbase );
-#endif
         continue;
       }
       case IAny: {
         if (s < e) {
           p++;
           s++;
-#ifdef TRACE
-          printf( "%14s: s < e\n", "IAny" );
-#endif
         }
         else {
-#ifdef TRACE
-          printf( "%14s: s >= e, fail\n", "IAny" );
-#endif
           goto fail;
         }
         continue;
@@ -80,45 +52,27 @@ print_stack_items( stack, stackbase );
       case ITestAny: {
         if (s < e) {
           p += 2;
-#ifdef TRACE
-          printf( "%14s: s < e\n", "ITestAny" );
-#endif
         }
         else {
           p += getoffset(p);
-#ifdef TRACE
-          printf( "%14s:: p += %d", "ITestAny", getoffset(p) );
-#endif
         }
         continue;
       }
       case IChar: {
         if ((byte)*s == p->i.aux && s < e) {
-#ifdef TRACE
-          printf( "%14s: s < e\n", "IChar" );
-#endif
           p++;
           s++;
         }
         else {
-#ifdef TRACE
-          printf( "%14s: s >= e, fail\n", "IChar" );
-#endif
           goto fail;
         }
         continue;
       }
       case ITestChar: {
         if ((byte)*s == p->i.aux && s < e) {
-#ifdef TRACE
-          printf( "%14s: s < e\n", "ITestChar" );
-#endif
           p += 2;
         }
         else {
-#ifdef TRACE
-          printf( "%14s:: p += %d", "ITestChar", getoffset(p) );
-#endif
           p += getoffset(p);
         }
         continue;
@@ -126,16 +80,10 @@ print_stack_items( stack, stackbase );
       case ISet: {
         int c = (byte)*s;
         if (testchar((p+1)->buff, c) && s < e) {
-#ifdef TRACE
-          printf( "%14s: s < e\n", "ISet" );
-#endif
           p += CHARSETINSTSIZE;
           s++;
         }
         else {
-#ifdef TRACE
-          printf( "%14s: s >= e, fail\n", "ISet" );
-#endif
           goto fail;
         }
         continue;
@@ -143,15 +91,9 @@ print_stack_items( stack, stackbase );
       case ITestSet: {
         int c = (byte)*s;
         if (testchar((p + 2)->buff, c) && s < e) {
-#ifdef TRACE
-          printf( "%14s: s < e\n", "ITestSet" );
-#endif
           p += 1 + CHARSETINSTSIZE;
         }
         else {
-#ifdef TRACE
-          printf( "%14s:: p += %d", "ITestSet", getoffset(p) );
-#endif
           p += getoffset(p);
         }
         continue;
@@ -159,9 +101,6 @@ print_stack_items( stack, stackbase );
       case IBehind: {
         int n = p->i.aux;
         if (n > s - o) {
-#ifdef TRACE
-          printf( "%14s: n > s - o, fail\n", "IBehind" );
-#endif
           goto fail;
         }
         s -= n;
@@ -172,9 +111,6 @@ print_stack_items( stack, stackbase );
         for (; s < e; s++) {
           int c = (byte)*s;
           if (!testchar((p+1)->buff, c)) {
-#ifdef TRACE
-            printf( "%14s: testchar fail\n", "ISpan" );
-#endif
             break;
           }
         }
@@ -191,15 +127,7 @@ print_stack_items( stack, stackbase );
         stack->p = p + getoffset(p);
         stack->s = s;
         stack->caplevel = captop;
-#ifdef TRACE
-printf( "%14s: >>>\n", "IChoice" );
-print_stack_items( stack, stackbase );
-#endif
         stack++;
-#ifdef TRACE
-printf( "%14s: <<<\n", "IChoice" );
-print_stack_items( stack, stackbase );
-#endif
         p += 2;
         continue;
       }
@@ -208,29 +136,13 @@ print_stack_items( stack, stackbase );
           stack = doublestack(L, &stacklimit, ptop);
         stack->s = NULL;
         stack->p = p + 2;  /* save return address */
-#ifdef TRACE
-printf( "%14s: >>>\n", "ICall" );
-print_stack_items( stack, stackbase );
-#endif
         stack++;
-#ifdef TRACE
-printf( "%14s: <<<\n", "ICall" );
-print_stack_items( stack, stackbase );
-#endif
         p += getoffset(p);
         continue;
       }
       case ICommit: {
         assert(stack > getstackbase(L, ptop) && (stack - 1)->s != NULL);
-#ifdef TRACE
-printf( "%14s: >>>\n", "ICommit" );
-print_stack_items( stack, stackbase );
-#endif
         stack--;
-#ifdef TRACE
-printf( "%14s: <<<\n", "ICommit" );
-print_stack_items( stack, stackbase );
-#endif
         p += getoffset(p);
         continue;
       }
@@ -243,53 +155,25 @@ print_stack_items( stack, stackbase );
       }
       case IBackCommit: {
         assert(stack > getstackbase(L, ptop) && (stack - 1)->s != NULL);
-#ifdef TRACE
-printf( "%14s: >>>\n", "IBackCommit" );
-print_stack_items( stack, stackbase );
-#endif
         s = (--stack)->s;
-#ifdef TRACE
-printf( "%14s: <<<\n", "IBackCommit" );
-print_stack_items( stack, stackbase );
-#endif
         captop = stack->caplevel;
         p += getoffset(p);
         continue;
       }
       case IFailTwice:
         assert(stack > getstackbase(L, ptop));
-#ifdef TRACE
-printf( "%14s: >>>\n", "IFailTwice" );
-print_stack_items( stack, stackbase );
-#endif
         stack--;
-#ifdef TRACE
-printf( "%14s: <<<\n", "IFailTwice" );
-print_stack_items( stack, stackbase );
-#endif
         /* go through */
       case IFail:
       fail: { /* pattern failed: try to backtrack */
-#ifdef TRACE
-printf( "%14s: >>>\n", "IFail" );
-print_stack_items( stack, stackbase );
-#endif
         do {  /* remove pending calls */
           assert(stack > getstackbase(L, ptop));
           s = (--stack)->s;
         } while (s == NULL);
-#ifdef TRACE
-printf( "%14s: <<<\n", "IFail" );
-print_stack_items( stack, stackbase );
-#endif
         if (ndyncap > 0)  /* is there matchtime captures? */
           ndyncap -= removedyncap(L, capture, stack->caplevel, captop);
         captop = stack->caplevel;
         p = stack->p;
-#ifdef TRACE
-printf( "%14s: pc: %d\n", "IFail", op - p );
-print_stack_items( stack, stackbase );
-#endif
         continue;
       }
       case ICloseRunTime: {
@@ -353,9 +237,6 @@ print_stack_items( stack, stackbase );
       }
       default:
         assert(0);
-#ifdef DISPLAY
-printf( "%14s: Returns NULL\n", "***default" );
-#endif
         return NULL;
     }
   }
@@ -457,6 +338,78 @@ Readonly our $ICloseCapture  => 'ICloseCapture';
  # Close runtime
 Readonly our $ICloseRunTime  => 'ICloseRunTime';
 
+has _coverage => (
+  is => 'rw',
+  isa => 'HashRef',
+  required => 1,
+  default => sub { {
+asdf => { },
+    $IAny           => { },
+    $IChar          => { },
+    $ISet           => { },
+    $ITestAny       => { },
+    $ITestChar      => { },
+    $ITestSet       => { },
+    $ISpan          => { },
+    $IBehind        => { },
+    $IRet           => { },
+    $IEnd           => { },
+    $IChoice        => { },
+    $IJmp           => { },
+    $ICall          => { },
+    $IOpenCall      => { },
+    $ICommit        => { },
+    $IPartialCommit => { },
+    $IBackCommit    => { },
+    $IFailTwice     => { },
+    $IFail          => { },
+    $IGiveup        => { },
+    $IFullCapture   => { },
+    $IOpenCapture   => { },
+    $ICloseCapture  => { },
+    $ICloseRunTime  => { },
+} } );
+
+method cover ( $opcode, $branch ) {
+  if ( $branch ) {
+    $self->_coverage->{$opcode}{$branch}++;
+  }
+  else {
+    $self->_coverage->{$opcode}{all}++;
+  }
+}
+
+method covered ( ) {
+  my %found;
+  my %coverage = %{ $self->_coverage };
+  for my $opcode ( keys %coverage ) {
+    next unless $opcode =~ /^I/;
+    next unless $coverage{$opcode}{all} or ( $coverage{$opcode}{if} and
+                                             $coverage{$opcode}{else} );
+    $found{$opcode} = $coverage{$opcode};
+
+  }
+  return \%found;
+}
+method uncovered ( ) {
+  my %missing;
+  my %coverage = %{ $self->_coverage };
+  for my $opcode ( keys %coverage ) {
+    next unless $opcode =~ /^I/;
+    next if $coverage{$opcode} and
+            $coverage{$opcode}{all} and
+            $coverage{$opcode}{all} > 0;
+    $missing{$opcode}{if} = undef unless $coverage{$opcode} and
+                                         $coverage{$opcode}{if} and
+                                         $coverage{$opcode}{if} > 0;
+    $missing{$opcode}{else} = undef unless $coverage{$opcode} and
+                                           $coverage{$opcode}{else} and
+                                           $coverage{$opcode}{else} > 0;
+
+  }
+  return \%missing;
+}
+
 =head1 NAME
 
 JGoff::Parser::PEG::VM - VM for parser
@@ -537,16 +490,19 @@ die "*** Too many iterations of while()!" unless $count--;
     TRACE0( $opcode, '' );
 
     if ( $opcode eq $IEnd ) {
+      $self->cover( $IEnd );
       ASSERT( $IEnd, "Stack depth < 1!" )
         if @{ $e } == 0;
       TRACE0( $IEnd, "return %d", $i );
       return $i;
     }
     elsif ( $opcode eq $IGiveup ) {
+      $self->cover( $IGiveup );
       TRACE0( $IGiveup, "return %s", 'undef' );
       return undef;
     }
     elsif ( $opcode eq $IRet ) {
+      $self->cover( $IRet );
       ASSERT( $IRet, "Stack depth < 1!" )
         if @{ $e } == 0;
       ASSERT( $IRet, "Stack N-1 does not have a string!" )
@@ -559,12 +515,14 @@ die "*** Too many iterations of while()!" unless $count--;
     }
     elsif ( $opcode eq $IAny ) {
       if ( $i < length( $s ) ) {
+        $self->cover( $IAny, 'if' );
         TRACE1( $IAny, $pc, "s < e" );
         $pc++;
         $i++;
         goto CONTINUE;
       }
       else {
+        $self->cover( $IAny, 'else' );
         TRACE1( $IAny, $pc, "s >= e, fail" );
         $fail = 1;
         goto FAIL;
@@ -572,11 +530,13 @@ die "*** Too many iterations of while()!" unless $count--;
     }
     elsif ( $opcode eq $ITestAny ) {
       if ( $i < length( $s ) ) {
+        $self->cover( $ITestAny, 'if' );
         TRACE1( $ITestAny, $pc, "s < e" );
         $pc += 2;
         TRACE1( $ITestAny, $pc, "(pc => %d)", $pc );
       }
       else {
+        $self->cover( $ITestAny, 'else' );
         my $offset = getoffset( $op, $pc );
         TRACE1( $ITestAny, $pc, "pc += (pc+1)->offset (%d)", $offset );
         $pc += getoffset( $op, $pc );
@@ -584,13 +544,15 @@ die "*** Too many iterations of while()!" unless $count--;
       goto CONTINUE;
     }
     elsif ( $opcode eq $IChar ) {
-      if ( substr( $s, $i, 1 ) eq $op->[ $pc ]->{aux} ) {
+      if ( substr( $s, $i, 1 ) eq chr( $op->[ $pc ]->{aux} ) ) {
+        $self->cover( $IChar, 'if' );
         TRACE1( $IChar, $pc, "c = aux" );
         $pc++;
         $i++;
         goto CONTINUE;
       }
       else {
+        $self->cover( $IChar, 'else' );
         TRACE1( $IChar, $pc, "fail" );
         $fail = 1;
         goto FAIL;
@@ -598,16 +560,18 @@ die "*** Too many iterations of while()!" unless $count--;
     }
     elsif ( $opcode eq $ITestChar ) {
       TRACE1( $ITestChar, $pc,
-              "[s => '%s', i => %d, *s => '%s', p->i.aux => '%c'] (%d)",
+              "[s => '%s', i => %d, *s => '%s', p->i.aux => '%d'] (%d)",
               $s, $i, substr( $s, $i, 1 ), $op->[ $pc ]->{aux},
               ( substr( $s, $i, 1 ) eq chr( $op->[ $pc ]->{aux} ) ) ? 1 : 0 );
       if ( ( substr( $s, $i, 1 ) eq chr( $op->[ $pc ]->{aux} ) ) &&
            ( $i < length( $s ) ) ) {
+        $self->cover( $ITestChar, 'if' );
         TRACE1( $ITestChar, $pc,
                 "s < e { \$i (%d) < length(\%s) (%d)", $i, $s, length( $s ) );
         $pc += 2;
       }
       else {
+        $self->cover( $ITestChar, 'else' );
         my $offset = getoffset( $op, $pc );
         TRACE1( $ITestChar, $pc, "pc += getoffset(p) (%d)", $offset );
         $pc += getoffset( $op, $pc );
@@ -618,12 +582,14 @@ die "*** Too many iterations of while()!" unless $count--;
       my $c = substr( $s, $i, 1 );
       if ( testchar( $ISet, $pc,
                      $op->[ $pc + 1 ]->{buff}, $c ) && $i < length( $s ) ) {
+        $self->cover( $ISet, 'if' );
         TRACE1( $ISet, $pc, "s < e" );
         $pc += $CHARSETINSTSIZE;
         $i++;
         goto CONTINUE;
       }
       else {
+        $self->cover( $ISet, 'else' );
         TRACE1( $ISet, $pc, "fail" );
         $fail = 1;
         goto FAIL;
@@ -634,10 +600,12 @@ die "*** Too many iterations of while()!" unless $count--;
       TRACE1( $ITestSet, $pc, "pc + 2: %d", $pc + 2 );
       if ( testchar( $ITestSet, $pc,
                      $op->[ $pc + 2 ]->{buff}, $c ) && $i < length( $s ) ) {
+        $self->cover( $ITestSet, 'if' );
         TRACE1( $ITestSet, $pc,  "s < e (pc + 2: %d)", $pc + 2 );
         $pc += 1 + $CHARSETINSTSIZE;
       }
       else {
+        $self->cover( $ITestSet, 'else' );
         TRACE1( $ITestSet, $pc, "pc += (pc+1)->offset" );
         $pc += getoffset( $op, $pc );
       }
@@ -646,11 +614,13 @@ die "*** Too many iterations of while()!" unless $count--;
     elsif ( $opcode eq $IBehind ) {
       my $n = $op->[ $pc ]->{aux};
       if ( $n > $i ) {
+        $self->cover( $IBehind, 'if' );
         TRACE1( $IBehind, $pc, "n > s - o" );
         $fail = 1;
         goto FAIL;
       }
       else {
+        $self->cover( $IBehind, 'else' );
         TRACE1( $IBehind, $pc, "n <= s - o" );
         $i -= $n;
         $pc++;
@@ -658,12 +628,14 @@ die "*** Too many iterations of while()!" unless $count--;
       }
     }
     elsif ( $opcode eq $ISpan ) {
+      $self->cover( $ISpan );
 #die "Operation $ISpan not implemented yet!\n";
       # XXX See how $i gets bumped here?
       for ( ; $i < length( $s ) ; $i++ ) {
         my $c = substr( $s, $i, 1 );
         if ( !testchar( $ISpan, $pc,
                         $op->[ $pc + 1 ]->{buff}, $c ) && $i < length( $s ) ) {
+          $self->cover( $ISpan, 'if' );
           last;
         }
       }
@@ -671,10 +643,12 @@ die "*** Too many iterations of while()!" unless $count--;
       goto CONTINUE;
     }
     elsif ( $opcode eq $IJmp ) {
+      $self->cover( $IJmp );
       $pc += getoffset( $op, $pc );
       goto CONTINUE;
     }
     elsif ( $opcode eq $IChoice ) {
+      $self->cover( $IChoice );
       TRACE1( $IChoice, $pc, ">>> %s", Dump( $e ) );
       $e->[ $stack ]->{pc} = $pc + getoffset( $op, $pc );
       $e->[ $stack ]->{i} = $i;
@@ -684,6 +658,7 @@ die "*** Too many iterations of while()!" unless $count--;
       goto CONTINUE;
     }
     elsif ( $opcode eq $ICall ) {
+      $self->cover( $ICall );
       TRACE1( $ICall, $pc, ">>> %s", Dump( $e ) );
       $e->[ $stack ]->{i} = $NULL;
       $e->[ $stack ]->{pc} = $pc + 2;
@@ -693,6 +668,7 @@ die "*** Too many iterations of while()!" unless $count--;
       goto CONTINUE;
     }
     elsif ( $opcode eq $ICommit ) {
+      $self->cover( $ICommit );
       TRACE1( $ICommit, $pc, ">>> %s", Dump( $e ) );
       $stack--;
       TRACE1( $ICommit, $pc, "<<< %s", Dump( $e ) );
@@ -700,11 +676,13 @@ die "*** Too many iterations of while()!" unless $count--;
       goto CONTINUE;
     }
     elsif ( $opcode eq $IPartialCommit ) {
+      $self->cover( $IPartialCommit );
       $e->[ $stack - 1 ]->{i} = $i;
       $pc += getoffset( $op, $pc );
       goto CONTINUE;
     }
     elsif ( $opcode eq $IBackCommit ) {
+      $self->cover( $IBackCommit );
       TRACE1( $IBackCommit, $pc, ">>> %s", Dump( $e ) );
       $i = $e->[ --$stack ]->{i};
       TRACE1( $IBackCommit, $pc, "<<< %s", Dump( $e ) );
@@ -713,6 +691,7 @@ die "*** Too many iterations of while()!" unless $count--;
       goto CONTINUE;
     }
     elsif ( $opcode eq $IFailTwice ) {
+      $self->cover( $IFailTwice );
       TRACE1( $IFailTwice, $pc, ">>> %s", Dump( $e ) );
       $stack--;
       TRACE1( $IFailTwice, $pc, "<<< %s", Dump( $e ) );
@@ -720,6 +699,7 @@ die "*** Too many iterations of while()!" unless $count--;
       goto FAIL;
     }
     elsif ( $opcode eq $IFail ) {
+      $self->cover( $IFail );
       $fail = 1;
       goto FAIL;
     }
@@ -741,15 +721,19 @@ last unless $stack_count--;
     }
 
     if ( $opcode eq $ICloseRunTime ) {
+      $self->_coverage->{$ICloseRunTime} = { all => 1 }; # No branches to take
 die "Operation $ICloseRunTime not implemented yet!\n";
     }
     elsif ( $opcode eq $ICloseCapture ) {
+      $self->_coverage->{$ICloseCapture} = { all => 1 }; # No branches to take
 die "Operation $ICloseCapture not implemented yet!\n";
     }
     elsif ( $opcode eq $IOpenCapture ) {
+      $self->_coverage->{$IOpenCapture} = { all => 1 }; # No branches to take
 die "Operation $IOpenCapture not implemented yet!\n";
     }
     elsif ( $opcode eq $IFullCapture ) {
+      $self->_coverage->{$IFullCapture} = { all => 1 }; # No branches to take
 die "Operation $IFullCapture not implemented yet!\n";
     }
 
@@ -759,6 +743,7 @@ die "Operation $IFullCapture not implemented yet!\n";
     }
 
     if ( $opcode eq $IOpenCall ) {
+      $self->_coverage->{$IOpenCall} = { all => 1 }; # No branches to take
 die "Operation $IOpenCall not implemented yet!\n";
     }
 
