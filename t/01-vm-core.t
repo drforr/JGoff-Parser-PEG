@@ -3,15 +3,11 @@
 use strict;
 use warnings;
 
-use Test::More tests => 38;
+use Test::More tests => 36;
 
 BEGIN {
-  use_ok( 'JGoff::Parser::PEG' ) || print "Bail out!\n";
-  use_ok( 'JGoff::Parser::PEG::Compile' ) || print "Bail out!";
   use_ok( 'JGoff::Parser::PEG::VM' ) || print "Bail out!";
 }
-use strict;
-use warnings;
 
 #
 # Starts off with the minimal path to exercise an operation. The error paths
@@ -808,4 +804,4 @@ my $vm = JGoff::Parser::PEG::VM->new;
 }
 
 #use YAML;warn Dump($vm->covered);
-use YAML;warn Dump($vm->uncovered);
+#use YAML;warn Dump($vm->uncovered);

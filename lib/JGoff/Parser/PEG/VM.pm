@@ -1,259 +1,64 @@
 package JGoff::Parser::PEG::VM;
 
-=pod
-
-#define testchar(st,c)	st[c >> 3] & (1 << (c & 7))
-
-/* {{{ Opcode interpreter
- *
- */
-const char *match (lua_State *L, const char *o, const char *s, const char *e,
-                   Instruction *op, Capture *capture, int ptop) {
-  Stack stackbase[INITBACK];
-  Stack *stacklimit = stackbase + INITBACK;
-  Stack *stack = stackbase;  /* point to first empty slot in stack */
-  int capsize = INITCAPSIZE;
-  int captop = 0;  /* point to first empty slot in captures */
-  int ndyncap = 0;  /* number of dynamic captures (in Lua stack) */
-  const Instruction *p = op;  /* current instruction */
-  stack->p = &giveup; stack->s = s; stack->caplevel = 0; stack++;
-  lua_pushlightuserdata(L, stackbase);
-
-printf( "*** starting\n" );
-
-  for (;;) {
-    assert(stackidx(ptop) + ndyncap == lua_gettop(L) && ndyncap <= captop);
-    switch ((Opcode)p->i.code) {
-      case IEnd: {
-        assert(stack == getstackbase(L, ptop) + 1);
-        capture[captop].kind = Cclose;
-        capture[captop].s = NULL;
-        return s;
-      }
-      case IGiveup: {
-        assert(stack == getstackbase(L, ptop));
-        return NULL;
-      }
-      case IRet: {
-        assert(stack > getstackbase(L, ptop) && (stack - 1)->s == NULL);
-        p = (--stack)->p;
-        continue;
-      }
-      case IAny: {
-        if (s < e) {
-          p++;
-          s++;
-        }
-        else {
-          goto fail;
-        }
-        continue;
-      }
-      case ITestAny: {
-        if (s < e) {
-          p += 2;
-        }
-        else {
-          p += getoffset(p);
-        }
-        continue;
-      }
-      case IChar: {
-        if ((byte)*s == p->i.aux && s < e) {
-          p++;
-          s++;
-        }
-        else {
-          goto fail;
-        }
-        continue;
-      }
-      case ITestChar: {
-        if ((byte)*s == p->i.aux && s < e) {
-          p += 2;
-        }
-        else {
-          p += getoffset(p);
-        }
-        continue;
-      }
-      case ISet: {
-        int c = (byte)*s;
-        if (testchar((p+1)->buff, c) && s < e) {
-          p += CHARSETINSTSIZE;
-          s++;
-        }
-        else {
-          goto fail;
-        }
-        continue;
-      }
-      case ITestSet: {
-        int c = (byte)*s;
-        if (testchar((p + 2)->buff, c) && s < e) {
-          p += 1 + CHARSETINSTSIZE;
-        }
-        else {
-          p += getoffset(p);
-        }
-        continue;
-      }
-      case IBehind: {
-        int n = p->i.aux;
-        if (n > s - o) {
-          goto fail;
-        }
-        s -= n;
-        p++;
-        continue;
-      }
-      case ISpan: {
-        for (; s < e; s++) {
-          int c = (byte)*s;
-          if (!testchar((p+1)->buff, c)) {
-            break;
-          }
-        }
-        p += CHARSETINSTSIZE;
-        continue;
-      }
-      case IJmp: {
-        p += getoffset(p);
-        continue;
-      }
-      case IChoice: {
-        if (stack == stacklimit)
-          stack = doublestack(L, &stacklimit, ptop);
-        stack->p = p + getoffset(p);
-        stack->s = s;
-        stack->caplevel = captop;
-        stack++;
-        p += 2;
-        continue;
-      }
-      case ICall: {
-        if (stack == stacklimit)
-          stack = doublestack(L, &stacklimit, ptop);
-        stack->s = NULL;
-        stack->p = p + 2;  /* save return address */
-        stack++;
-        p += getoffset(p);
-        continue;
-      }
-      case ICommit: {
-        assert(stack > getstackbase(L, ptop) && (stack - 1)->s != NULL);
-        stack--;
-        p += getoffset(p);
-        continue;
-      }
-      case IPartialCommit: {
-        assert(stack > getstackbase(L, ptop) && (stack - 1)->s != NULL);
-        (stack - 1)->s = s;
-        (stack - 1)->caplevel = captop;
-        p += getoffset(p);
-        continue;
-      }
-      case IBackCommit: {
-        assert(stack > getstackbase(L, ptop) && (stack - 1)->s != NULL);
-        s = (--stack)->s;
-        captop = stack->caplevel;
-        p += getoffset(p);
-        continue;
-      }
-      case IFailTwice:
-        assert(stack > getstackbase(L, ptop));
-        stack--;
-        /* go through */
-      case IFail:
-      fail: { /* pattern failed: try to backtrack */
-        do {  /* remove pending calls */
-          assert(stack > getstackbase(L, ptop));
-          s = (--stack)->s;
-        } while (s == NULL);
-        if (ndyncap > 0)  /* is there matchtime captures? */
-          ndyncap -= removedyncap(L, capture, stack->caplevel, captop);
-        captop = stack->caplevel;
-        p = stack->p;
-        continue;
-      }
-      case ICloseRunTime: {
-        CapState cs;
-        int rem, res, n;
-        int fr = lua_gettop(L) + 1;  /* stack index of first result */
-        cs.s = o; cs.L = L; cs.ocap = capture; cs.ptop = ptop;
-        n = runtimecap(&cs, capture + captop, s, &rem);  /* call function */
-        captop -= n;  /* remove nested captures */
-        fr -= rem;  /* 'rem' items were popped from Lua stack */
-        res = resdyncaptures(L, fr, s - o, e - o);  /* get result */
-        if (res == -1)  /* fail? */
-          goto fail;
-        s = o + res;  /* else update current position */
-        n = lua_gettop(L) - fr + 1;  /* number of new captures */
-        ndyncap += n - rem;  /* update number of dynamic captures */
-        if (n > 0) {  /* any new capture? */
-          if ((captop += n + 2) >= capsize) {
-            capture = doublecap(L, capture, captop, ptop);
-            capsize = 2 * captop;
-          }
-          /* add new captures to 'capture' list */
-          adddyncaptures(s, capture + captop - n - 2, n, fr); 
-        }
-        p++;
-        continue;
-      }
-      case ICloseCapture: {
-        const char *s1 = s;
-        assert(captop > 0);
-        /* if possible, turn capture into a full capture */
-        if (capture[captop - 1].siz == 0 &&
-            s1 - capture[captop - 1].s < UCHAR_MAX) {
-          capture[captop - 1].siz = s1 - capture[captop - 1].s + 1;
-          p++;
-          continue;
-        }
-        else {
-          capture[captop].siz = 1;  /* mark entry as closed */
-          capture[captop].s = s;
-          goto pushcapture;
-        }
-      }
-      case IOpenCapture:
-        capture[captop].siz = 0;  /* mark entry as open */
-        capture[captop].s = s;
-        goto pushcapture;
-      case IFullCapture:
-        capture[captop].siz = getoff(p) + 1;  /* save capture size */
-        capture[captop].s = s - getoff(p);
-        /* goto pushcapture; */
-      pushcapture: {
-        capture[captop].idx = p->i.key;
-        capture[captop].kind = getkind(p);
-        if (++captop >= capsize) {
-          capture = doublecap(L, capture, captop, ptop);
-          capsize = 2 * captop;
-        }
-        p++;
-        continue;
-      }
-      default:
-        assert(0);
-        return NULL;
-    }
-  }
-}
-/* }}} */
-
-=cut
-
-use Carp qw( croak );
 use Moose;                # XXX May be removed later
 use Function::Parameters; # XXX Will probably be removed later
 use Readonly;
 use YAML;
+use JGoff::Parser::PEG::Constants qw(
+  $NULL
+  $UCHAR_MAX
+  $CHARSETSIZE
+  $CHARSETINSTSIZE
+  $IAny
+  $IChar
+  $ISet
+  $ITestAny
+  $ITestChar
+  $ITestSet
+  $ISpan
+  $IBehind
+  $IRet
+  $IEnd
+  $IChoice
+  $IJmp
+  $ICall
+  $IOpenCall
+  $ICommit
+  $IPartialCommit
+  $IBackCommit
+  $IFailTwice
+  $IFail
+  $IGiveup
+  $IFullCapture
+  $IOpenCapture
+  $ICloseCapture
+  $ICloseRunTime
+  $Cclose
+  $Cposition
+  $Cconst
+  $Cbackref
+  $Carg
+  $Csimple
+  $Ctable
+  $Cfunction
+  $Cquery
+  $Cstring
+  $Cnum
+  $Csubst
+  $Cfold
+  $Cruntime
+  $Cgroup
+);
+
+has capture => (
+  is => 'rw',
+  isa => 'ArrayRef[HashRef]',
+  default => sub { [ ] }
+);
 
 our $TRACE = 0;
 fun ASSERT ( $opcode, $format, @args ) {
-  die sprintf "%14s: %format\n", $opcode, @args;
+  die sprintf "%14s: $format\n", $opcode, @args;
 }
 fun TRACE0 ( $opcode, $format, @args ) {
   $TRACE and warn sprintf "%14s: $format\n", $opcode, @args;
@@ -261,82 +66,6 @@ fun TRACE0 ( $opcode, $format, @args ) {
 fun TRACE1 ( $opcode, $pc, $format, @args ) {
   $TRACE > 1 and warn sprintf "%14s [pc: %d]: $format\n", $opcode, $pc, @args;
 }
-
-Readonly our $NULL => -1;
-Readonly our $CHARSETSIZE => 32; # Extracted from the C source
-Readonly our $CHARSETINSTSIZE => 9;
-
-# fail if no char
-Readonly our $IAny           => 'IAny';
-
-# fail if char != aux
-Readonly our $IChar          => 'IChar';
-
-# fail if char not in buff
-Readonly our $ISet           => 'ISet';
-
-# if no char, jump to 'offset'
-Readonly our $ITestAny       => 'ITestAny';
-
-# if char != aux, jump to 'offset'
-Readonly our $ITestChar      => 'ITestChar';
-
-# if char not in buff, jump to 'offset'
-Readonly our $ITestSet       => 'ITestSet';
-
-# read a span of chars in buff
-Readonly our $ISpan          => 'ISpan';
-
-# walk back 'aux' characters (fail if not possible)
-Readonly our $IBehind        => 'IBehind';
-
-# return from a rule
-Readonly our $IRet           => 'IRet';
-
-# end of pattern
-Readonly our $IEnd           => 'IEnd';
-
-# stack a choice; next fail will jump to 'offset'
-Readonly our $IChoice        => 'IChoice';
-
-# jump to 'offset'
-Readonly our $IJmp           => 'IJmp';
-
-# call rule at 'offset'
-Readonly our $ICall          => 'ICall';
-
-# call rule number 'key' (must be closed to a ICall)
-Readonly our $IOpenCall      => 'IOpenCall';
-
-# pop choice and jump to 'offset'
-Readonly our $ICommit        => 'ICommit';
-
-# update top choice to current position and jump
-Readonly our $IPartialCommit => 'IPartialCommit';
-
-# "fails" but jump to its own 'offset'
-Readonly our $IBackCommit    => 'IBackCommit';
-
-# pop one choice and then fail
-Readonly our $IFailTwice     => 'IFailTwice';
-
-# go back to saved state on choice and jump to saved offset
-Readonly our $IFail          => 'IFail';
-
-# internal use
-Readonly our $IGiveup        => 'IGiveup';
-
-# complete capture of last 'off' chars
-Readonly our $IFullCapture   => 'IFullCapture';
- 
-# start a capture
-Readonly our $IOpenCapture   => 'IOpenCapture';
-
-# close a capture
-Readonly our $ICloseCapture  => 'ICloseCapture';
-
- # Close runtime
-Readonly our $ICloseRunTime  => 'ICloseRunTime';
 
 has _coverage => (
   is => 'rw',
@@ -391,6 +120,7 @@ method covered ( ) {
   }
   return \%found;
 }
+
 method uncovered ( ) {
   my %missing;
   my %coverage = %{ $self->_coverage };
@@ -445,14 +175,43 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =cut
 
-# {{{ getoffset( $p )
+# {{{ getoffset( p )
 fun getoffset ( $op, $pc ) {
   return $op->[ $pc + 1 ]->{offset};
 }
 # }}}
 
-# {{{ testchar ( $opcode, $pc, $st, $c )
+# {{{ getkind( op )
+#
+# define getkind(op)             (op->i.aux & 0xF)
+#
+fun getkind ( $op, $pc ) {
+  return $op->[ $pc ]->{aux} & 0xf;
+}
+# }}}
 
+# {{{ getoff( op )
+#
+#define getoff(op)              ((op->i.aux >> 4) & 0xF)
+#
+fun getoff ( $op, $pc ) {
+  return ( $op->[ $pc ]->{aux} >> 4 ) & 0xf;
+}
+# }}}
+
+# {{{ joinkindoff( k, o )
+#
+# define joinkindoff(k,o)        (k | (o << 4))
+#
+fun joinkindoff ( $k, $o ) {
+  return ( $k | ( $o << 4 ) );
+}
+# }}}
+
+# {{{ testchar ( $opcode, $pc, $st, $c )
+#
+# define testchar(st,c) 		st[c >> 3] & (1 << (c & 7))
+#
 fun testchar ( $opcode, $pc, $st, $c ) {
   my $c_ord = ord( $c );
   my $rv = $st->[ $c_ord >> 3 ] & ( 1 << ( $c_ord & 7 ) );
@@ -466,11 +225,15 @@ fun testchar ( $opcode, $pc, $st, $c ) {
 
 # {{{ run ( $op, $s )
 
-method run ( $op, $s ) {
+method run ( $op, $s, $ptop ) {
   my $e = [ ];
   my $stack = 0; # Start of the stack, just mimick the C stack for now.
   my $i = 0;
   my $pc = 0;
+
+  # capture is an attribute
+  my $captop = 0;
+  my $ndyncap = 0;
 
   $e = [ { pc => -1, i => 0 } ]; # XXX Fake a 'IGiveup' instruction.
   $stack++;
@@ -494,6 +257,8 @@ die "*** Too many iterations of while()!" unless $count--;
       ASSERT( $IEnd, "Stack depth < 1!" )
         if @{ $e } == 0;
       TRACE0( $IEnd, "return %d", $i );
+      $self->capture->[$captop]->{kind} = $Cclose;
+      $self->capture->[$captop]->{s} = $NULL;
       return $i;
     }
     elsif ( $opcode eq $IGiveup ) {
@@ -652,6 +417,7 @@ die "*** Too many iterations of while()!" unless $count--;
       TRACE1( $IChoice, $pc, ">>> %s", Dump( $e ) );
       $e->[ $stack ]->{pc} = $pc + getoffset( $op, $pc );
       $e->[ $stack ]->{i} = $i;
+      $e->[ $stack ]->{caplevel} = $captop;
       $stack++;
       TRACE1( $IChoice, $pc, "<<< %s", Dump( $e ) );
       $pc += 2;
@@ -678,6 +444,7 @@ die "*** Too many iterations of while()!" unless $count--;
     elsif ( $opcode eq $IPartialCommit ) {
       $self->cover( $IPartialCommit );
       $e->[ $stack - 1 ]->{i} = $i;
+      $e->[ $stack - 1 ]->{caplevel} = $captop;
       $pc += getoffset( $op, $pc );
       goto CONTINUE;
     }
@@ -685,6 +452,7 @@ die "*** Too many iterations of while()!" unless $count--;
       $self->cover( $IBackCommit );
       TRACE1( $IBackCommit, $pc, ">>> %s", Dump( $e ) );
       $i = $e->[ --$stack ]->{i};
+      $captop = $e->[ $stack ]->{caplevel};
       TRACE1( $IBackCommit, $pc, "<<< %s", Dump( $e ) );
       $pc += getoffset( $op, $pc );
 #die "Operation $IBackCommit not implemented yet!\n";
@@ -714,6 +482,10 @@ my $stack_count = 10;
 last unless $stack_count--;
         $i = $e->[ --$stack ]->{i};
       } while $i == $NULL;
+      if ( $ndyncap > 0 ) { # Are there matching captures?
+        $ndyncap -= $self->removedyncap( $self->capture, $e->[ $stack ]->{caplevel}, $captop );
+      }
+      $captop = $e->[ $stack ]->{caplevel};
       TRACE1( 'fail', $pc, "<<< %s", Dump( $e ) );
       $pc = $e->[ $stack ]->{pc};
       TRACE0( 'fail', ": pc = %d", $pc );
@@ -721,26 +493,82 @@ last unless $stack_count--;
     }
 
     if ( $opcode eq $ICloseRunTime ) {
-      $self->_coverage->{$ICloseRunTime} = { all => 1 }; # No branches to take
-die "Operation $ICloseRunTime not implemented yet!\n";
+die "Opcode $ICloseRunTime not implemented yet!\n";
+#      $self->cover( $ICloseRunTime );
+#      my $cs = { }; # CapState cs;
+#      my ( $rem, $res, $n );
+#my $L; # XXX Lua stack
+#      my $fr = lua_gettop( $L ) + 1;
+#      $cs->{i} = 0; # XXX 'o' in the code
+#      $cs->{L} = $L;
+#      $cs->{ocap} = $self->capture;
+#      $cs->{ptop} = $ptop;
+#      $n = runtimecap( $cs, $self->capture, $captop, $i, \$rem ); # XXX call function
+#      $captop -= $n;
+#      $fr -= $rem;
+#      #$res = resdyncaptures( $L, $fr, $i, $j ); # XXX $j is e - o # Get result # XXX
+#      if ( $res == -1 ) { # fail?
+#        $fail = 1;
+#        goto FAIL;
+#      }
+#      # s = o + res; # XXX
+#      $n = lua_gettop( $L ) - $fr + 1; # Number of new captures
+#      $ndyncap += $n - $rem;
+#      if ( $n > 0 ) { # Any new captures?
+#        adddyncaptures( $i, $self->capture, $captop - $n - 2, $n, $fr ); # XXX
+#      }
+#      $pc++;
+#      goto CONTINUE;
     }
     elsif ( $opcode eq $ICloseCapture ) {
-      $self->_coverage->{$ICloseCapture} = { all => 1 }; # No branches to take
-die "Operation $ICloseCapture not implemented yet!\n";
+die "Opcode $ICloseCapture not implemented yet!\n";
+#      $self->cover( $ICloseCapture );
+#      my $i1 = $i;
+#      ASSERT( $ICloseCapture, "captop <= 0" )
+#        if $captop <= 0;
+#      # If possible, convert capture into a full capture
+#      if ( $self->capture->[ $captop - 1 ]->{siz} == 0 &&
+#        $i1 -$self->capture->[ $captop - 1 ]->{i} < $UCHAR_MAX ) {
+#        TRACE0( $ICloseCapture, "Checking uchar_max", '' );
+#        $self->capture->[ $captop - 1 ]->{siz} = $i1 - $self->capture->[ $captop - 1 ]->{i} + 1;
+#        $pc++;
+#use YAML; warn Dump($self->capture);
+#        goto CONTINUE;
+#      }
+#      else {
+#        $self->capture->[ $captop ]->{siz} = 1; # Mark entry as closed
+#        $self->capture->[ $captop ]->{i} = $i; # Mark entry as closed
+#        $pushcapture = 1;
+#        goto PUSHCAPTURE;
+#      }
     }
     elsif ( $opcode eq $IOpenCapture ) {
-      $self->_coverage->{$IOpenCapture} = { all => 1 }; # No branches to take
-die "Operation $IOpenCapture not implemented yet!\n";
+die "Opcode $IOpenCapture not implemented yet!\n";
+#      $self->cover( $IOpenCapture );
+#      $self->capture->[ $captop ]->{siz} = 0; # Mark entry as open
+#      $self->capture->[ $captop ]->{i} = $i;
+#      $pushcapture = 1;
+#      goto PUSHCAPTURE;
     }
     elsif ( $opcode eq $IFullCapture ) {
-      $self->_coverage->{$IFullCapture} = { all => 1 }; # No branches to take
-die "Operation $IFullCapture not implemented yet!\n";
+die "Opcode $IFullCapture not implemented yet!\n";
+#      $self->cover( $IFullCapture );
+#      $self->capture->[ $captop ]->{siz} = getoff( $op, $pc ) + 1; # Save capture size
+#      $self->capture->[ $captop ]->{i} = $i - getoff( $op, $pc );
+#      $pushcapture = 1;
+#      goto PUSHCAPTURE;
     }
 
-    if ( $pushcapture ) {
-      $pc++;
-      goto CONTINUE;
-    }
+#    PUSHCAPTURE: {
+#    if ( $pushcapture ) {
+#      $self->capture->[ $captop ]->{idx} = $op->[ $pc ]->{key};
+#      $self->capture->[ $captop ]->{kind} = _lookup_kind( getkind( $op, $pc ) );
+#      # XXX And see if we need to resize the capture array. Blah.
+#      $captop++;
+#      $pc++;
+#      goto CONTINUE;
+#    }
+#    }
 
     if ( $opcode eq $IOpenCall ) {
       $self->_coverage->{$IOpenCall} = { all => 1 }; # No branches to take
@@ -827,14 +655,6 @@ die "Operation $IOpenCall not implemented yet!\n";
 #                { pc + 1, i, e } ; i + n > |S|
 
 =cut
-
-# static const Instruction giveup = {{IGiveup, 0, 0}};
-
-#
-# 'unshift' is the equivalent of pop based on how we're augmenting the "stacK".
-# 
-# { pc, i, h : e } => ( $pc, $i, do { unshift @e } ) = ( $pc, $i, @e );
-#
 
 =head1 AUTHOR
 
