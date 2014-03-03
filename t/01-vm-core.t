@@ -20,7 +20,7 @@ my $vm = JGoff::Parser::PEG::VM->new;
 #
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'IEnd' }, # pc: 0
+    { code => 'IEnd' }, # pc: 0
   ], q{} ),
   0 )
 }
@@ -30,8 +30,8 @@ my $vm = JGoff::Parser::PEG::VM->new;
 #
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'IFail' }, # pc: 0
-    { opcode => 'IEnd'  }, # pc: 1
+    { code => 'IFail' }, # pc: 0
+    { code => 'IEnd'  }, # pc: 1
   ], q{a} ),
   undef )
 }
@@ -41,14 +41,14 @@ my $vm = JGoff::Parser::PEG::VM->new;
 #
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'IChar', aux => ord( 'a' ) }, # pc: 0
-    { opcode => 'IEnd'                     }, # pc: 1
+    { code => 'IChar', aux => ord( 'a' ) }, # pc: 0
+    { code => 'IEnd'                     }, # pc: 1
   ], q{a} ),
   1 );
 
   is( $vm->run( [
-    { opcode => 'IChar', aux => ord( 'a' ) }, # pc: 0
-    { opcode => 'IEnd'                     }, # pc: 1
+    { code => 'IChar', aux => ord( 'a' ) }, # pc: 0
+    { code => 'IEnd'                     }, # pc: 1
   ], q{b} ),
   undef )
 }
@@ -58,15 +58,15 @@ my $vm = JGoff::Parser::PEG::VM->new;
 #
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'IAny' }, # pc: 0
-    { opcode => 'IEnd' }, # pc: 1
+    { code => 'IAny' }, # pc: 0
+    { code => 'IEnd' }, # pc: 1
   ], q{aa} ),
   1 );
 
   is( $vm->run( [
-    { opcode => 'IAny' }, # pc: 0
-    { opcode => 'IAny' }, # pc: 1
-    { opcode => 'IEnd' }, # pc: 2
+    { code => 'IAny' }, # pc: 0
+    { code => 'IAny' }, # pc: 1
+    { code => 'IEnd' }, # pc: 2
   ], q{a} ),
   undef )
 }
@@ -76,14 +76,14 @@ my $vm = JGoff::Parser::PEG::VM->new;
 #
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'ITestAny'   }, # pc: 0
+    { code => 'ITestAny'   }, # pc: 0
     { offset => 7            }, # pc: 1
-    { opcode => 'IChoice'    }, # pc: 2
+    { code => 'IChoice'    }, # pc: 2
     { offset => 5            }, # pc: 3
-    { opcode => 'IAny'       }, # pc: 4
-    { opcode => 'IAny'       }, # pc: 5
-    { opcode => 'IFailTwice' }, # pc: 6
-    { opcode => 'IEnd'       }, # pc: 7
+    { code => 'IAny'       }, # pc: 4
+    { code => 'IAny'       }, # pc: 5
+    { code => 'IFailTwice' }, # pc: 6
+    { code => 'IEnd'       }, # pc: 7
   ], q{xa} ),
   undef )
 }
@@ -93,22 +93,22 @@ my $vm = JGoff::Parser::PEG::VM->new;
 #
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'ITestAny'   }, # pc: 0
+    { code => 'ITestAny'   }, # pc: 0
     { offset => 7            }, # pc: 1
-    { opcode => 'IChoice'    }, # pc: 2
+    { code => 'IChoice'    }, # pc: 2
     { offset => 5            }, # pc: 3
-    { opcode => 'IAny'       }, # pc: 4
-    { opcode => 'IAny'       }, # pc: 5
-    { opcode => 'IFailTwice' }, # pc: 6
-    { opcode => 'IEnd'       }, # pc: 7
+    { code => 'IAny'       }, # pc: 4
+    { code => 'IAny'       }, # pc: 5
+    { code => 'IFailTwice' }, # pc: 6
+    { code => 'IEnd'       }, # pc: 7
   ], q{x} ),
   0 );
 
   is( $vm->run( [
-    { opcode => 'ITestAny' }, # pc: 0
+    { code => 'ITestAny' }, # pc: 0
     { offset => 3          }, # pc: 1
-    { opcode => 'IFail'    }, # pc: 2
-    { opcode => 'IEnd'     }, # pc: 3
+    { code => 'IFail'    }, # pc: 2
+    { code => 'IEnd'     }, # pc: 3
   ], q{} ),
   0 )
 }
@@ -118,32 +118,32 @@ my $vm = JGoff::Parser::PEG::VM->new;
 #
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'ITestChar', aux => 97 }, # pc: 0
+    { code => 'ITestChar', aux => 97 }, # pc: 0
     { offset => 3                      }, # pc: 1
-    { opcode => 'IAny'                 }, # pc: 2
-    { opcode => 'IEnd'                 }, # pc: 3
+    { code => 'IAny'                 }, # pc: 2
+    { code => 'IEnd'                 }, # pc: 3
   ], q{b} ),
   0 );
 
   is( $vm->run( [
-    { opcode => 'ITestChar', aux => 97     }, # pc: 0
+    { code => 'ITestChar', aux => 97     }, # pc: 0
     { offset => 10                         }, # pc: 1
-    { opcode => 'IChoice'                  }, # pc: 2
+    { code => 'IChoice'                  }, # pc: 2
     { offset => 8                          }, # pc: 3
-    { opcode => 'IAny'                     }, # pc: 4
-    { opcode => 'IChar', aux => ord( 'b' ) }, # pc: 5
-    { opcode => 'IBehind', aux => 1        }, # pc: 6
-    { opcode => 'IChar', aux => ord( 'c' ) }, # pc: 7
-    { opcode => 'ICommit'                  }, # pc: 8
+    { code => 'IAny'                     }, # pc: 4
+    { code => 'IChar', aux => ord( 'b' ) }, # pc: 5
+    { code => 'IBehind', aux => 1        }, # pc: 6
+    { code => 'IChar', aux => ord( 'c' ) }, # pc: 7
+    { code => 'ICommit'                  }, # pc: 8
     { offset => 2                          }, # pc: 9
-    { opcode => 'IEnd'                     }, # pc: 10
+    { code => 'IEnd'                     }, # pc: 10
   ], q{ab} ),
   0 );
 
   is( $vm->run( [
-    { opcode => 'IBehind', aux => 1        }, # pc: 0
-    { opcode => 'IChar', aux => ord( 'a' ) }, # pc: 1
-    { opcode => 'IEnd'                     }, # pc: 2
+    { code => 'IBehind', aux => 1        }, # pc: 0
+    { code => 'IChar', aux => ord( 'a' ) }, # pc: 1
+    { code => 'IEnd'                     }, # pc: 2
   ], q{a} ),
   undef )
 }
@@ -153,56 +153,56 @@ my $vm = JGoff::Parser::PEG::VM->new;
 #
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'ICall'                    }, # pc: 0
+    { code => 'ICall'                    }, # pc: 0
     { offset => 4                          }, # pc: 1
-    { opcode => 'IEnd'                     }, # pc: 2
-    { opcode => 'IAny'                     }, # pc: 3
-    { opcode => 'ITestChar', aux => 114    }, # pc: 4
+    { code => 'IEnd'                     }, # pc: 2
+    { code => 'IAny'                     }, # pc: 3
+    { code => 'ITestChar', aux => 114    }, # pc: 4
     { offset => 16                         }, # pc: 5
-    { opcode => 'IChoice'                  }, # pc: 6
+    { code => 'IChoice'                  }, # pc: 6
     { offset => 14                         }, # pc: 7
-    { opcode => 'IAny'                     }, # pc: 8
-    { opcode => 'IChar', aux => ord( 'u' ) }, # pc: 9
-    { opcode => 'IChar', aux => ord( 'l' ) }, # pc: 10
-    { opcode => 'IChar', aux => ord( 'e' ) }, # pc: 11
-    { opcode => 'IChar', aux => ord( ' ' ) }, # pc: 12
-    { opcode => 'IChar', aux => ord( "'" ) }, # pc: 13
-    { opcode => 'IChar', aux => ord( '1' ) }, # pc: 14
-    { opcode => 'IChar', aux => ord( "'" ) }, # pc: 15
-    { opcode => 'IChar', aux => ord( ' ' ) }, # pc: 16
-    { opcode => 'IChar', aux => ord( 'm' ) }, # pc: 17
-    { opcode => 'ICommit'                  }, # pc: 18
+    { code => 'IAny'                     }, # pc: 8
+    { code => 'IChar', aux => ord( 'u' ) }, # pc: 9
+    { code => 'IChar', aux => ord( 'l' ) }, # pc: 10
+    { code => 'IChar', aux => ord( 'e' ) }, # pc: 11
+    { code => 'IChar', aux => ord( ' ' ) }, # pc: 12
+    { code => 'IChar', aux => ord( "'" ) }, # pc: 13
+    { code => 'IChar', aux => ord( '1' ) }, # pc: 14
+    { code => 'IChar', aux => ord( "'" ) }, # pc: 15
+    { code => 'IChar', aux => ord( ' ' ) }, # pc: 16
+    { code => 'IChar', aux => ord( 'm' ) }, # pc: 17
+    { code => 'ICommit'                  }, # pc: 18
     { offset => 5                          }, # pc: 19
-    { opcode => 'IAny'                     }, # pc: 20
-    { opcode => 'IJmp'                     }, # pc: 21
+    { code => 'IAny'                     }, # pc: 20
+    { code => 'IJmp'                     }, # pc: 21
     { offset => -17                        }, # pc: 22
-    { opcode => 'IRet'                     }, # pc: 23
-    { opcode => 'IEnd'                     }, # pc: 24
+    { code => 'IRet'                     }, # pc: 23
+    { code => 'IEnd'                     }, # pc: 24
   ],   q{rule '1' m} ),
   10 );
 
   is( $vm->run( [
-    { opcode => 'ICall'                    }, # pc: 0
+    { code => 'ICall'                    }, # pc: 0
     { offset => 4                          }, # pc: 1
-    { opcode => 'IEnd'                     }, # pc: 2
-    { opcode => 'IAny'                     }, # pc: 3
-    { opcode => 'ITestChar', aux => 117    }, # pc: 4
+    { code => 'IEnd'                     }, # pc: 2
+    { code => 'IAny'                     }, # pc: 3
+    { code => 'ITestChar', aux => 117    }, # pc: 4
     { offset => 12                         }, # pc: 5
-    { opcode => 'IChoice'                  }, # pc: 6
+    { code => 'IChoice'                  }, # pc: 6
     { offset => 10                         }, # pc: 7
-    { opcode => 'IAny'                     }, # pc: 8
-    { opcode => 'IChar', aux => ord( 'n' ) }, # pc: 9
-    { opcode => 'IChar', aux => ord( 'd' ) }, # pc: 10
-    { opcode => 'IChar', aux => ord( 'e' ) }, # pc: 11
-    { opcode => 'IChar', aux => ord( 'f' ) }, # pc: 12
-    { opcode => 'IChar', aux => ord( 'i' ) }, # pc: 13
-    { opcode => 'ICommit'                  }, # pc: 14
+    { code => 'IAny'                     }, # pc: 8
+    { code => 'IChar', aux => ord( 'n' ) }, # pc: 9
+    { code => 'IChar', aux => ord( 'd' ) }, # pc: 10
+    { code => 'IChar', aux => ord( 'e' ) }, # pc: 11
+    { code => 'IChar', aux => ord( 'f' ) }, # pc: 12
+    { code => 'IChar', aux => ord( 'i' ) }, # pc: 13
+    { code => 'ICommit'                  }, # pc: 14
     { offset => 5                          }, # pc: 15
-    { opcode => 'IAny'                     }, # pc: 16
-    { opcode => 'IJmp'                     }, # pc: 17
+    { code => 'IAny'                     }, # pc: 16
+    { code => 'IJmp'                     }, # pc: 17
     { offset => -13                        }, # pc: 18
-    { opcode => 'IRet'                     }, # pc: 19
-    { opcode => 'IEnd'                     }, # pc: 20
+    { code => 'IRet'                     }, # pc: 19
+    { code => 'IEnd'                     }, # pc: 20
   ],   q{rule '(a table)' undefi} ),
   23 )
 }
@@ -212,8 +212,8 @@ my $vm = JGoff::Parser::PEG::VM->new;
 #
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'IBehind', aux => 1 }, # pc: 0
-    { opcode => 'ISet' }, # pc: 1
+    { code => 'IBehind', aux => 1 }, # pc: 0
+    { code => 'ISet' }, # pc: 1
     { offset => -1,
       buff => [0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
                0x01,0x00,0x00,0xf8,0x01,0x00,0x00,0xf8,
@@ -254,12 +254,12 @@ my $vm = JGoff::Parser::PEG::VM->new;
                0x00,0x00,0x00,0x00,0x78,0x57,0x55,0x9e,
                0x5e,0x7f,0x00,0x00,0x78,0x57,0x55,0x9e,
                0x5e,0x7f,0x00,0x00,0x20,0x4a,0x43,0x01, ] }, # pc: 9
-    { opcode => 'IEnd' }, # pc: 10
+    { code => 'IEnd' }, # pc: 10
   ],   q{} ),
   undef );
 
   is( $vm->run( [
-    { opcode => 'ISet' }, # pc: 0
+    { code => 'ISet' }, # pc: 0
     { offset => 0,
       buff => [0x00,0x00,0x00,0x00,0x00,0x00,0xe0,0x00,
                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -300,13 +300,13 @@ my $vm = JGoff::Parser::PEG::VM->new;
                0x09,0x00,0x55,0x9e,0x5e,0x7f,0x00,0x00,
                0x03,0x00,0x00,0x00,0x06,0x00,0x00,0x00,
                0x00,0x00,0x00,0x00,0x14,0x15,0x00,0x00, ] }, # pc: 8
-    { opcode => 'IBehind', aux => 1 }, # pc: 9
-    { opcode => 'IEnd' }, # pc: 10
+    { code => 'IBehind', aux => 1 }, # pc: 9
+    { code => 'IEnd' }, # pc: 10
   ],   q{} ),
   undef );
 
   is( $vm->run( [
-    { opcode => 'ISet' }, # pc: 0
+    { code => 'ISet' }, # pc: 0
     { offset => 0,
       buff => [0x00,0x00,0x00,0x00,0x00,0x00,0xe0,0x00,
                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -347,9 +347,9 @@ my $vm = JGoff::Parser::PEG::VM->new;
                0x00,0x00,0x3d,0x01,0x09,0x00,0x00,0x00,
                0x04,0x00,0x00,0x00,0x02,0x00,0x78,0x78,
                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, ] }, # pc: 8
-    { opcode => 'IBehind', aux => 1 }, # pc: 9
-    { opcode => 'IAny' }, # pc: 10
-    { opcode => 'IEnd' }, # pc: 11
+    { code => 'IBehind', aux => 1 }, # pc: 9
+    { code => 'IAny' }, # pc: 10
+    { code => 'IEnd' }, # pc: 11
   ],   q{6} ),
   1 )
 }
@@ -359,12 +359,12 @@ my $vm = JGoff::Parser::PEG::VM->new;
 #
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'ICall' }, # pc: 0
+    { code => 'ICall' }, # pc: 0
     { offset => 4 }, # pc: 1
-    { opcode => 'IEnd' }, # pc: 2
-    { opcode => 'IAny' }, # pc: 3
-    { opcode => 'IChar', aux => ord( '(' ) }, # pc: 4
-    { opcode => 'ITestSet' }, # pc: 5
+    { code => 'IEnd' }, # pc: 2
+    { code => 'IAny' }, # pc: 3
+    { code => 'IChar', aux => ord( '(' ) }, # pc: 4
+    { code => 'ITestSet' }, # pc: 5
     { offset => 29,
       buff => [0x1d,0x00,0x00,0x00,0xff,0xff,0xff,0xff,
                0xff,0xfd,0xff,0xff,0xff,0xff,0xff,0xff,
@@ -410,7 +410,7 @@ my $vm = JGoff::Parser::PEG::VM->new;
                0x0d,0x00,0x00,0x00,0xff,0xff,0xff,0xff,
                0xff,0xfc,0xff,0xff,0xff,0xff,0xff,0xff,
                0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, ] }, # pc: 14
-    { opcode => 'ITestSet' }, # pc: 15
+    { code => 'ITestSet' }, # pc: 15
     { offset => 13,
       buff => [0x0d,0x00,0x00,0x00,0xff,0xff,0xff,0xff,
                0xff,0xfc,0xff,0xff,0xff,0xff,0xff,0xff,
@@ -456,18 +456,18 @@ my $vm = JGoff::Parser::PEG::VM->new;
                0x0b,0x00,0xff,0xff,0xeb,0xff,0xff,0xff,
                0x01,0x28,0xff,0xff,0x07,0x01,0x2f,0x6c,
                0x0c,0x00,0x00,0x00,0xe6,0xff,0xff,0xff, ] }, # pc: 24
-    { opcode => 'IAny' }, # pc: 25
-    { opcode => 'IJmp' }, # pc: 26
+    { code => 'IAny' }, # pc: 25
+    { code => 'IJmp' }, # pc: 26
     { offset => -21 }, # pc: 27
-    { opcode => 'IChar', aux => ord( '(' ) }, # pc: 28
-    { opcode => 'IBehind', aux => 1 }, # pc: 29
-    { opcode => 'ICall' }, # pc: 30
+    { code => 'IChar', aux => ord( '(' ) }, # pc: 28
+    { code => 'IBehind', aux => 1 }, # pc: 29
+    { code => 'ICall' }, # pc: 30
     { offset => -26 }, # pc: 31
-    { opcode => 'IJmp' }, # pc: 32
+    { code => 'IJmp' }, # pc: 32
     { offset => -27 }, # pc: 33
-    { opcode => 'IChar', aux => ord( ')' ) }, # pc: 34
-    { opcode => 'IRet' }, # pc: 35
-    { opcode => 'IEnd' }, # pc: 36
+    { code => 'IChar', aux => ord( ')' ) }, # pc: 34
+    { code => 'IRet' }, # pc: 35
+    { code => 'IEnd' }, # pc: 36
   ],   q{(al())()} ),
   6 )
 }
@@ -477,7 +477,7 @@ my $vm = JGoff::Parser::PEG::VM->new;
 #
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'ISpan' }, # pc: 0
+    { code => 'ISpan' }, # pc: 0
     { offset => 0,
       buff => [0x00,0x00,0x00,0x00,0x00,0x00,0xff,0x03,
                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -518,7 +518,7 @@ my $vm = JGoff::Parser::PEG::VM->new;
                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
                0xfe,0xff,0xff,0x07,0xfe,0xff,0xff,0x07,
                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, ] }, # pc: 8
-    { opcode => 'ISet' }, # pc: 9
+    { code => 'ISet' }, # pc: 9
     { offset => 0,
       buff => [0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
                0xfe,0xff,0xff,0x07,0xfe,0xff,0xff,0x07,
@@ -559,7 +559,7 @@ my $vm = JGoff::Parser::PEG::VM->new;
                0x00,0x00,0x00,0x00,0x00,0x00,0xff,0x03,
                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, ] }, # pc: 17
-    { opcode => 'ISet' }, # pc: 18
+    { code => 'ISet' }, # pc: 18
     { offset => 0,
       buff => [0x00,0x00,0x00,0x00,0x00,0x00,0xff,0x03,
                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -600,10 +600,10 @@ my $vm = JGoff::Parser::PEG::VM->new;
                0x03,0x00,0x00,0x00,0x12,0x00,0x00,0x00,
                0x09,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
                0x90,0x00,0x00,0x00,0x00,0x00,0x00,0x00, ] }, # pc: 26
-    { opcode => 'ITestAny' }, # pc: 27
+    { code => 'ITestAny' }, # pc: 27
     { offset => 3 }, # pc: 28
-    { opcode => 'IFail' }, # pc: 29
-    { opcode => 'IEnd' }, # pc: 30
+    { code => 'IFail' }, # pc: 29
+    { code => 'IEnd' }, # pc: 30
   ],   q{1298a1} ),
   6 )
 }
@@ -614,56 +614,56 @@ my $vm = JGoff::Parser::PEG::VM->new;
 
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'IEnd' }, # pc: 0
+    { code => 'IEnd' }, # pc: 0
   ], q{a} ),
   0 )
 }
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'IChar', aux => ord( 'a' ) }, # pc: 0
-    { opcode => 'IEnd' }, # pc: 1
+    { code => 'IChar', aux => ord( 'a' ) }, # pc: 0
+    { code => 'IEnd' }, # pc: 1
   ], q{alo} ),
   1 )
 }
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'IFail' }, # pc: 0
-    { opcode => 'IChar', aux => ord( 'a' ) }, # pc: 1
-    { opcode => 'IEnd' }, # pc: 2
+    { code => 'IFail' }, # pc: 0
+    { code => 'IChar', aux => ord( 'a' ) }, # pc: 1
+    { code => 'IEnd' }, # pc: 2
   ], q{a} ),
   undef )
 }
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'IChar', aux => ord( 'a' ) }, # pc: 0
-    { opcode => 'IFail' }, # pc: 1
-    { opcode => 'IEnd' }, # pc: 2
+    { code => 'IChar', aux => ord( 'a' ) }, # pc: 0
+    { code => 'IFail' }, # pc: 1
+    { code => 'IEnd' }, # pc: 2
   ], q{a} ),
   undef )
 }
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'IChar', aux => ord( 'a' ) }, # pc: 0
-    { opcode => 'IChar', aux => ord( 'l' ) }, # pc: 1
-    { opcode => 'IEnd' }, # pc: 2
+    { code => 'IChar', aux => ord( 'a' ) }, # pc: 0
+    { code => 'IChar', aux => ord( 'l' ) }, # pc: 1
+    { code => 'IEnd' }, # pc: 2
   ], q{alo} ),
   2 )
 }
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'IChar', aux => ord( 'a' ) }, # pc: 0
-    { opcode => 'IChar', aux => ord( 'l' ) }, # pc: 1
-    { opcode => 'IChar', aux => ord( 'u' ) }, # pc: 2
-    { opcode => 'IEnd' }, # pc: 3
+    { code => 'IChar', aux => ord( 'a' ) }, # pc: 0
+    { code => 'IChar', aux => ord( 'l' ) }, # pc: 1
+    { code => 'IChar', aux => ord( 'u' ) }, # pc: 2
+    { code => 'IEnd' }, # pc: 3
   ], q{alo} ),
   undef )
 }
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'ITestAny' }, # pc: 0
+    { code => 'ITestAny' }, # pc: 0
     { offset => 3 }, # pc: 1
-    { opcode => 'IFail' }, # pc: 2
-    { opcode => 'IEnd' }, # pc: 3
+    { code => 'IFail' }, # pc: 2
+    { code => 'IEnd' }, # pc: 3
   ],   q{a} ),
   undef )
 }
@@ -672,31 +672,31 @@ my $vm = JGoff::Parser::PEG::VM->new;
 #
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'IAny' }, # pc: 0
-    { opcode => 'IAny' }, # pc: 1
-    { opcode => 'IAny' }, # pc: 2
-    { opcode => 'IEnd' }, # pc: 3
+    { code => 'IAny' }, # pc: 0
+    { code => 'IAny' }, # pc: 1
+    { code => 'IAny' }, # pc: 2
+    { code => 'IEnd' }, # pc: 3
   ], q{aaaa} ),
   3 )
 }
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'IAny' }, # pc: 0
-    { opcode => 'IAny' }, # pc: 1
-    { opcode => 'IAny' }, # pc: 2
-    { opcode => 'IAny' }, # pc: 3
-    { opcode => 'IEnd' }, # pc: 4
+    { code => 'IAny' }, # pc: 0
+    { code => 'IAny' }, # pc: 1
+    { code => 'IAny' }, # pc: 2
+    { code => 'IAny' }, # pc: 3
+    { code => 'IEnd' }, # pc: 4
   ], q{aaaa} ),
   4 )
 }
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'IAny' }, # pc: 0
-    { opcode => 'IAny' }, # pc: 1
-    { opcode => 'IAny' }, # pc: 2
-    { opcode => 'IAny' }, # pc: 3
-    { opcode => 'IAny' }, # pc: 4
-    { opcode => 'IEnd' }, # pc: 5
+    { code => 'IAny' }, # pc: 0
+    { code => 'IAny' }, # pc: 1
+    { code => 'IAny' }, # pc: 2
+    { code => 'IAny' }, # pc: 3
+    { code => 'IAny' }, # pc: 4
+    { code => 'IEnd' }, # pc: 5
   ], q{aaaa} ),
   undef )
 }
@@ -705,74 +705,74 @@ my $vm = JGoff::Parser::PEG::VM->new;
 #
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'ITestAny' }, # pc: 0
+    { code => 'ITestAny' }, # pc: 0
     { offset => 8 }, # pc: 1
-    { opcode => 'IChoice' }, # pc: 2
+    { code => 'IChoice' }, # pc: 2
     { offset => 6 }, # pc: 3
-    { opcode => 'IAny' }, # pc: 4
-    { opcode => 'IAny' }, # pc: 5
-    { opcode => 'IAny' }, # pc: 6
-    { opcode => 'IFailTwice' }, # pc: 7
-    { opcode => 'IEnd' }, # pc: 8
+    { code => 'IAny' }, # pc: 4
+    { code => 'IAny' }, # pc: 5
+    { code => 'IAny' }, # pc: 6
+    { code => 'IFailTwice' }, # pc: 7
+    { code => 'IEnd' }, # pc: 8
   ], q{aa} ),
   0 )
 }
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'ITestAny' }, # pc: 0
+    { code => 'ITestAny' }, # pc: 0
     { offset => 8 }, # pc: 1
-    { opcode => 'IChoice' }, # pc: 2
+    { code => 'IChoice' }, # pc: 2
     { offset => 6 }, # pc: 3
-    { opcode => 'IAny' }, # pc: 4
-    { opcode => 'IAny' }, # pc: 5
-    { opcode => 'IAny' }, # pc: 6
-    { opcode => 'IFailTwice' }, # pc: 7
-    { opcode => 'IEnd' }, # pc: 8
+    { code => 'IAny' }, # pc: 4
+    { code => 'IAny' }, # pc: 5
+    { code => 'IAny' }, # pc: 6
+    { code => 'IFailTwice' }, # pc: 7
+    { code => 'IEnd' }, # pc: 8
   ], q{aaa} ),
   undef )
 }
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'ITestAny' }, # pc: 0
+    { code => 'ITestAny' }, # pc: 0
     { offset => 8 }, # pc: 1
-    { opcode => 'IChoice' }, # pc: 2
+    { code => 'IChoice' }, # pc: 2
     { offset => 6 }, # pc: 3
-    { opcode => 'IAny' }, # pc: 4
-    { opcode => 'IAny' }, # pc: 5
-    { opcode => 'IAny' }, # pc: 6
-    { opcode => 'IFailTwice' }, # pc: 7
-    { opcode => 'IEnd' }, # pc: 8
+    { code => 'IAny' }, # pc: 4
+    { code => 'IAny' }, # pc: 5
+    { code => 'IAny' }, # pc: 6
+    { code => 'IFailTwice' }, # pc: 7
+    { code => 'IEnd' }, # pc: 8
   ], q{aaaa} ),
   undef )
 }
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'ITestAny' }, # pc: 0
+    { code => 'ITestAny' }, # pc: 0
     { offset => 9 }, # pc: 1
-    { opcode => 'IChoice' }, # pc: 2
+    { code => 'IChoice' }, # pc: 2
     { offset => 7 }, # pc: 3
-    { opcode => 'IAny' }, # pc: 4
-    { opcode => 'IAny' }, # pc: 5
-    { opcode => 'IAny' }, # pc: 6
-    { opcode => 'IAny' }, # pc: 7
-    { opcode => 'IFailTwice' }, # pc: 8
-    { opcode => 'IEnd' }, # pc: 9
+    { code => 'IAny' }, # pc: 4
+    { code => 'IAny' }, # pc: 5
+    { code => 'IAny' }, # pc: 6
+    { code => 'IAny' }, # pc: 7
+    { code => 'IFailTwice' }, # pc: 8
+    { code => 'IEnd' }, # pc: 9
   ], q{aaaa} ),
   undef )
 }
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'ITestAny' }, # pc: 0
+    { code => 'ITestAny' }, # pc: 0
     { offset => 10 }, # pc: 1
-    { opcode => 'IChoice' }, # pc: 2
+    { code => 'IChoice' }, # pc: 2
     { offset => 8 }, # pc: 3
-    { opcode => 'IAny' }, # pc: 4
-    { opcode => 'IAny' }, # pc: 5
-    { opcode => 'IAny' }, # pc: 6
-    { opcode => 'IAny' }, # pc: 7
-    { opcode => 'IAny' }, # pc: 8
-    { opcode => 'IFailTwice' }, # pc: 9
-    { opcode => 'IEnd' }, # pc: 10
+    { code => 'IAny' }, # pc: 4
+    { code => 'IAny' }, # pc: 5
+    { code => 'IAny' }, # pc: 6
+    { code => 'IAny' }, # pc: 7
+    { code => 'IAny' }, # pc: 8
+    { code => 'IFailTwice' }, # pc: 9
+    { code => 'IEnd' }, # pc: 10
   ], q{aaaa} ),
   0 )
 }
@@ -782,23 +782,23 @@ my $vm = JGoff::Parser::PEG::VM->new;
 #
 { # local $JGoff::Parser::PEG::VM::TRACE = 2;
   is( $vm->run( [
-    { opcode => 'ITestChar', aux => 97 }, # pc: 0
+    { code => 'ITestChar', aux => 97 }, # pc: 0
     { offset => 16 }, # pc: 1
-    { opcode => 'IChoice' }, # pc: 2
+    { code => 'IChoice' }, # pc: 2
     { offset => 14 }, # pc: 3
-    { opcode => 'IAny' }, # pc: 4
-    { opcode => 'IChar', aux => ord( 'b' ) }, # pc: 5
-    { opcode => 'ITestChar', aux => 99 }, # pc: 6
+    { code => 'IAny' }, # pc: 4
+    { code => 'IChar', aux => ord( 'b' ) }, # pc: 5
+    { code => 'ITestChar', aux => 99 }, # pc: 6
     { offset => 8 }, # pc: 7
-    { opcode => 'IPartialCommit' }, # pc: 8
+    { code => 'IPartialCommit' }, # pc: 8
     { offset => 2 }, # pc: 9
-    { opcode => 'IChar', aux => ord( 'c' ) }, # pc: 10
-    { opcode => 'IChar', aux => ord( 'd' ) }, # pc: 11
-    { opcode => 'IPartialCommit' }, # pc: 12
+    { code => 'IChar', aux => ord( 'c' ) }, # pc: 10
+    { code => 'IChar', aux => ord( 'd' ) }, # pc: 11
+    { code => 'IPartialCommit' }, # pc: 12
     { offset => -2 }, # pc: 13
-    { opcode => 'ICommit' }, # pc: 14
+    { code => 'ICommit' }, # pc: 14
     { offset => 2 }, # pc: 15
-    { opcode => 'IEnd' }, # pc: 16
+    { code => 'IEnd' }, # pc: 16
   ],   q{abcdcdc} ),
   6 )
 }

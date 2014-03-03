@@ -100,6 +100,10 @@ method fixedlen( $t ) {
   $self->fixedlenx( $t, 0, 0 );
 }
 
+method treebuffer( $t ) {
+  $t + 1
+}
+
 #
 # ======================================================
 # Analysis and some optimizations

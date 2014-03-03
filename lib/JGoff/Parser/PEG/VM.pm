@@ -57,14 +57,14 @@ has capture => (
 );
 
 our $TRACE = 0;
-fun ASSERT ( $opcode, $format, @args ) {
-  die sprintf "%14s: $format\n", $opcode, @args;
+fun ASSERT ( $code, $format, @args ) {
+  die sprintf "%14s: $format\n", $code, @args;
 }
-fun TRACE0 ( $opcode, $format, @args ) {
-  $TRACE and warn sprintf "%14s: $format\n", $opcode, @args;
+fun TRACE0 ( $code, $format, @args ) {
+  $TRACE and warn sprintf "%14s: $format\n", $code, @args;
 }
-fun TRACE1 ( $opcode, $pc, $format, @args ) {
-  $TRACE > 1 and warn sprintf "%14s [pc: %d]: $format\n", $opcode, $pc, @args;
+fun TRACE1 ( $code, $pc, $format, @args ) {
+  $TRACE > 1 and warn sprintf "%14s [pc: %d]: $format\n", $code, $pc, @args;
 }
 
 has _coverage => (
@@ -99,23 +99,23 @@ asdf => { },
     $ICloseRunTime  => { },
 } } );
 
-method cover ( $opcode, $branch ) {
+method cover ( $code, $branch ) {
   if ( $branch ) {
-    $self->_coverage->{$opcode}{$branch}++;
+    $self->_coverage->{$code}{$branch}++;
   }
   else {
-    $self->_coverage->{$opcode}{all}++;
+    $self->_coverage->{$code}{all}++;
   }
 }
 
 method covered ( ) {
   my %found;
   my %coverage = %{ $self->_coverage };
-  for my $opcode ( keys %coverage ) {
-    next unless $opcode =~ /^I/;
-    next unless $coverage{$opcode}{all} or ( $coverage{$opcode}{if} and
-                                             $coverage{$opcode}{else} );
-    $found{$opcode} = $coverage{$opcode};
+  for my $code ( keys %coverage ) {
+    next unless $code =~ /^I/;
+    next unless $coverage{$code}{all} or ( $coverage{$code}{if} and
+                                           $coverage{$code}{else} );
+    $found{$code} = $coverage{$code};
 
   }
   return \%found;
@@ -124,17 +124,17 @@ method covered ( ) {
 method uncovered ( ) {
   my %missing;
   my %coverage = %{ $self->_coverage };
-  for my $opcode ( keys %coverage ) {
-    next unless $opcode =~ /^I/;
-    next if $coverage{$opcode} and
-            $coverage{$opcode}{all} and
-            $coverage{$opcode}{all} > 0;
-    $missing{$opcode}{if} = undef unless $coverage{$opcode} and
-                                         $coverage{$opcode}{if} and
-                                         $coverage{$opcode}{if} > 0;
-    $missing{$opcode}{else} = undef unless $coverage{$opcode} and
-                                           $coverage{$opcode}{else} and
-                                           $coverage{$opcode}{else} > 0;
+  for my $code ( keys %coverage ) {
+    next unless $code =~ /^I/;
+    next if $coverage{$code} and
+            $coverage{$code}{all} and
+            $coverage{$code}{all} > 0;
+    $missing{$code}{if} = undef unless $coverage{$code} and
+                                       $coverage{$code}{if} and
+                                       $coverage{$code}{if} > 0;
+    $missing{$code}{else} = undef unless $coverage{$code} and
+                                         $coverage{$code}{else} and
+                                         $coverage{$code}{else} > 0;
 
   }
   return \%missing;
@@ -208,14 +208,14 @@ fun joinkindoff ( $k, $o ) {
 }
 # }}}
 
-# {{{ testchar ( $opcode, $pc, $st, $c )
+# {{{ testchar ( $code, $pc, $st, $c )
 #
-# define testchar(st,c) 		st[c >> 3] & (1 << (c & 7))
+# define testchar(st,c)		st[c >> 3] & (1 << (c & 7))
 #
-fun testchar ( $opcode, $pc, $st, $c ) {
+fun testchar ( $code, $pc, $st, $c ) {
   my $c_ord = ord( $c );
   my $rv = $st->[ $c_ord >> 3 ] & ( 1 << ( $c_ord & 7 ) );
-  TRACE1( $opcode, $pc,
+  TRACE1( $code, $pc,
           "(c >> 3 = %d, 1 << (c & 7) = %d, buff = [0x%02x]) => %d\n",
           $c_ord >> 3, 1 << ( $c_ord & 7 ), $st->[ $c_ord >> 3 ], $rv );
   return $rv;
@@ -246,13 +246,13 @@ my $count = 100;
 my $fail_count = 10;
 die "*** Too many iterations of while()!" unless $count--;
     my ( $fail, $pushcapture );
-    ASSERT( '', "PC $pc past the end of opcode array!" )
+    ASSERT( '', "PC $pc past the end of code array!" )
       if $pc > $#{ $op };
-    my $opcode = $pc == -1 ? $IGiveup : $op->[ $pc ]->{opcode};
+    my $code = $pc == -1 ? $IGiveup : $op->[ $pc ]->{code};
 
-    TRACE0( $opcode, '' );
+    TRACE0( $code, '' );
 
-    if ( $opcode eq $IEnd ) {
+    if ( $code eq $IEnd ) {
       $self->cover( $IEnd );
       ASSERT( $IEnd, "Stack depth < 1!" )
         if @{ $e } == 0;
@@ -261,12 +261,12 @@ die "*** Too many iterations of while()!" unless $count--;
       $self->capture->[$captop]->{s} = $NULL;
       return $i;
     }
-    elsif ( $opcode eq $IGiveup ) {
+    elsif ( $code eq $IGiveup ) {
       $self->cover( $IGiveup );
       TRACE0( $IGiveup, "return %s", 'undef' );
       return undef;
     }
-    elsif ( $opcode eq $IRet ) {
+    elsif ( $code eq $IRet ) {
       $self->cover( $IRet );
       ASSERT( $IRet, "Stack depth < 1!" )
         if @{ $e } == 0;
@@ -278,7 +278,7 @@ die "*** Too many iterations of while()!" unless $count--;
       TRACE1( $IRet, $pc, "<< %s", Dump( $e ) );
       goto CONTINUE;
     }
-    elsif ( $opcode eq $IAny ) {
+    elsif ( $code eq $IAny ) {
       if ( $i < length( $s ) ) {
         $self->cover( $IAny, 'if' );
         TRACE1( $IAny, $pc, "s < e" );
@@ -293,7 +293,7 @@ die "*** Too many iterations of while()!" unless $count--;
         goto FAIL;
       }
     }
-    elsif ( $opcode eq $ITestAny ) {
+    elsif ( $code eq $ITestAny ) {
       if ( $i < length( $s ) ) {
         $self->cover( $ITestAny, 'if' );
         TRACE1( $ITestAny, $pc, "s < e" );
@@ -308,7 +308,7 @@ die "*** Too many iterations of while()!" unless $count--;
       }
       goto CONTINUE;
     }
-    elsif ( $opcode eq $IChar ) {
+    elsif ( $code eq $IChar ) {
       if ( substr( $s, $i, 1 ) eq chr( $op->[ $pc ]->{aux} ) ) {
         $self->cover( $IChar, 'if' );
         TRACE1( $IChar, $pc, "c = aux" );
@@ -323,7 +323,7 @@ die "*** Too many iterations of while()!" unless $count--;
         goto FAIL;
       }
     }
-    elsif ( $opcode eq $ITestChar ) {
+    elsif ( $code eq $ITestChar ) {
       TRACE1( $ITestChar, $pc,
               "[s => '%s', i => %d, *s => '%s', p->i.aux => '%d'] (%d)",
               $s, $i, substr( $s, $i, 1 ), $op->[ $pc ]->{aux},
@@ -343,7 +343,7 @@ die "*** Too many iterations of while()!" unless $count--;
       }
       goto CONTINUE;
     }
-    elsif ( $opcode eq $ISet ) {
+    elsif ( $code eq $ISet ) {
       my $c = substr( $s, $i, 1 );
       if ( testchar( $ISet, $pc,
                      $op->[ $pc + 1 ]->{buff}, $c ) && $i < length( $s ) ) {
@@ -360,7 +360,7 @@ die "*** Too many iterations of while()!" unless $count--;
         goto FAIL;
       }
     }
-    elsif ( $opcode eq $ITestSet ) {
+    elsif ( $code eq $ITestSet ) {
       my $c = substr( $s, $i, 1 );
       TRACE1( $ITestSet, $pc, "pc + 2: %d", $pc + 2 );
       if ( testchar( $ITestSet, $pc,
@@ -376,7 +376,7 @@ die "*** Too many iterations of while()!" unless $count--;
       }
       goto CONTINUE;
     }
-    elsif ( $opcode eq $IBehind ) {
+    elsif ( $code eq $IBehind ) {
       my $n = $op->[ $pc ]->{aux};
       if ( $n > $i ) {
         $self->cover( $IBehind, 'if' );
@@ -392,7 +392,7 @@ die "*** Too many iterations of while()!" unless $count--;
         goto CONTINUE;
       }
     }
-    elsif ( $opcode eq $ISpan ) {
+    elsif ( $code eq $ISpan ) {
       $self->cover( $ISpan );
 #die "Operation $ISpan not implemented yet!\n";
       # XXX See how $i gets bumped here?
@@ -407,12 +407,12 @@ die "*** Too many iterations of while()!" unless $count--;
       $pc += $CHARSETINSTSIZE;
       goto CONTINUE;
     }
-    elsif ( $opcode eq $IJmp ) {
+    elsif ( $code eq $IJmp ) {
       $self->cover( $IJmp );
       $pc += getoffset( $op, $pc );
       goto CONTINUE;
     }
-    elsif ( $opcode eq $IChoice ) {
+    elsif ( $code eq $IChoice ) {
       $self->cover( $IChoice );
       TRACE1( $IChoice, $pc, ">>> %s", Dump( $e ) );
       $e->[ $stack ]->{pc} = $pc + getoffset( $op, $pc );
@@ -423,7 +423,7 @@ die "*** Too many iterations of while()!" unless $count--;
       $pc += 2;
       goto CONTINUE;
     }
-    elsif ( $opcode eq $ICall ) {
+    elsif ( $code eq $ICall ) {
       $self->cover( $ICall );
       TRACE1( $ICall, $pc, ">>> %s", Dump( $e ) );
       $e->[ $stack ]->{i} = $NULL;
@@ -433,7 +433,7 @@ die "*** Too many iterations of while()!" unless $count--;
       $pc += getoffset( $op, $pc );
       goto CONTINUE;
     }
-    elsif ( $opcode eq $ICommit ) {
+    elsif ( $code eq $ICommit ) {
       $self->cover( $ICommit );
       TRACE1( $ICommit, $pc, ">>> %s", Dump( $e ) );
       $stack--;
@@ -441,14 +441,14 @@ die "*** Too many iterations of while()!" unless $count--;
       $pc += getoffset( $op, $pc );
       goto CONTINUE;
     }
-    elsif ( $opcode eq $IPartialCommit ) {
+    elsif ( $code eq $IPartialCommit ) {
       $self->cover( $IPartialCommit );
       $e->[ $stack - 1 ]->{i} = $i;
       $e->[ $stack - 1 ]->{caplevel} = $captop;
       $pc += getoffset( $op, $pc );
       goto CONTINUE;
     }
-    elsif ( $opcode eq $IBackCommit ) {
+    elsif ( $code eq $IBackCommit ) {
       $self->cover( $IBackCommit );
       TRACE1( $IBackCommit, $pc, ">>> %s", Dump( $e ) );
       $i = $e->[ --$stack ]->{i};
@@ -458,7 +458,7 @@ die "*** Too many iterations of while()!" unless $count--;
 #die "Operation $IBackCommit not implemented yet!\n";
       goto CONTINUE;
     }
-    elsif ( $opcode eq $IFailTwice ) {
+    elsif ( $code eq $IFailTwice ) {
       $self->cover( $IFailTwice );
       TRACE1( $IFailTwice, $pc, ">>> %s", Dump( $e ) );
       $stack--;
@@ -466,7 +466,7 @@ die "*** Too many iterations of while()!" unless $count--;
       $fail = 1;
       goto FAIL;
     }
-    elsif ( $opcode eq $IFail ) {
+    elsif ( $code eq $IFail ) {
       $self->cover( $IFail );
       $fail = 1;
       goto FAIL;
@@ -492,7 +492,7 @@ last unless $stack_count--;
       goto CONTINUE;
     }
 
-    if ( $opcode eq $ICloseRunTime ) {
+    if ( $code eq $ICloseRunTime ) {
 die "Opcode $ICloseRunTime not implemented yet!\n";
 #      $self->cover( $ICloseRunTime );
 #      my $cs = { }; # CapState cs;
@@ -520,7 +520,7 @@ die "Opcode $ICloseRunTime not implemented yet!\n";
 #      $pc++;
 #      goto CONTINUE;
     }
-    elsif ( $opcode eq $ICloseCapture ) {
+    elsif ( $code eq $ICloseCapture ) {
 die "Opcode $ICloseCapture not implemented yet!\n";
 #      $self->cover( $ICloseCapture );
 #      my $i1 = $i;
@@ -542,7 +542,7 @@ die "Opcode $ICloseCapture not implemented yet!\n";
 #        goto PUSHCAPTURE;
 #      }
     }
-    elsif ( $opcode eq $IOpenCapture ) {
+    elsif ( $code eq $IOpenCapture ) {
 die "Opcode $IOpenCapture not implemented yet!\n";
 #      $self->cover( $IOpenCapture );
 #      $self->capture->[ $captop ]->{siz} = 0; # Mark entry as open
@@ -550,7 +550,7 @@ die "Opcode $IOpenCapture not implemented yet!\n";
 #      $pushcapture = 1;
 #      goto PUSHCAPTURE;
     }
-    elsif ( $opcode eq $IFullCapture ) {
+    elsif ( $code eq $IFullCapture ) {
 die "Opcode $IFullCapture not implemented yet!\n";
 #      $self->cover( $IFullCapture );
 #      $self->capture->[ $captop ]->{siz} = getoff( $op, $pc ) + 1; # Save capture size
@@ -570,7 +570,7 @@ die "Opcode $IFullCapture not implemented yet!\n";
 #    }
 #    }
 
-    if ( $opcode eq $IOpenCall ) {
+    if ( $code eq $IOpenCall ) {
       $self->_coverage->{$IOpenCall} = { all => 1 }; # No branches to take
 die "Operation $IOpenCall not implemented yet!\n";
     }

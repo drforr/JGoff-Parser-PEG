@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 1;
+use Test::More tests => 7;
 
 BEGIN {
   use_ok( 'JGoff::Parser::PEG::Codegen' ) || print "Bail out!";
@@ -15,6 +15,158 @@ BEGIN {
 #
 my $codegen = JGoff::Parser::PEG::Codegen->new;
 
+# $TSet { codecharset( $compst, treebuffer( $tree ), $tt ); }
+# $TTrue { }
+# $TFalse { addinstruction( $compst, $IFail, 0 ); }
+# $TChoice { codechoice( $compst, sib1( $tree ), sib2( $tree ), $opt, $fl ); }
+# $TRep { coderep( $compst, sib1( $tree ), $opt, $fl ); }
+# $TBehind { codebehind( $compst, $tree ); }
+# $TNot { codenot( $compst, sib1( $tree ) ); }
+# $TAnd { codeand( $compst, sib1( $tree ), $tt ); }
+# $TCapture { codecapture( $compst, $tree, $tt, $fl ); }
+# $TRunTime { coderuntime( $compst, $tree, $tt ); }
+# $TGrammar { coderuntime( $compst, $tree ); }
+# $TCall { codecall( $compst, $tree ); }
+# $TSeq { $tt = codeseq1( $compst, sib1( $tree ), sib2( $tree ), $tt, $fl );
+
+# $TChar { codechar( $compst, $tree->{n}, $tt ); } ( Two branches )
+#
+{
+  #
+  # If
+  #
+  { my $compst = {
+      ncode => 0,
+      p => {
+        codesize => 0,
+        code => [ { code => 'ITestChar', aux => ord( 'X' ) } ]
+      },
+      i => { code => undef, aux => undef }
+    };
+    my $tree = { tag => 'TChar', n => ord( 'X' ) };
+    my $opt;
+    my $tt = 0;
+    my $fl;
+    $codegen->codegen( $compst, $tree, $opt, $tt, $fl );
+    is_deeply( $compst->{p}->{code}, [
+      { code => 'IAny', aux => 0 }
+    ] );
+  }
+  #
+  # else
+  #
+  { my $compst = {
+      ncode => 0,
+      p => {
+        codesize => 0,
+                # Just something that's not ITestChar.
+        code => [ { code => 'foo', aux => 0 } ]
+      },
+      i => { code => undef, aux => undef }
+    };
+    my $tree = { tag => 'TChar', n => ord( 'X' ) };
+    my $opt;
+    my $tt = 0;
+    my $fl;
+    $codegen->codegen( $compst, $tree, $opt, $tt, $fl );
+    is_deeply( $compst->{p}->{code}, [
+      { code => 'IChar', aux => ord( 'X' ) }
+    ] );
+  }
+}
+
+#
+# $TAny { addinstruction( $compst, $IAny, 0 ); }
+#
+{ my $compst = {
+    ncode => 0,
+    p => {
+      codesize => 0,
+      code => [ { } ]
+    },
+    i => { code => undef, aux => undef }
+  };
+  my $tree = { tag => 'TAny' };
+  my $opt;
+  my $tt;
+  my $fl;
+  $codegen->codegen( $compst, $tree, $opt, $tt, $fl );
+  is_deeply( $compst->{p}->{code}, [
+    { code => 'IAny', aux => 0 }
+  ] );
+}
+
+# $TSet { codecharset( $compst, treebuffer( $tree ), $tt ); } ( Three branches )
+#
+{
+  #
+  # If (codechar)
+  #
+  {
+    #
+    # If (codecharset)(codechar)
+    #
+    { my $compst = {
+        ncode => 0,
+        p => {
+          codesize => 0,
+          code => [ { code => 'ITestChar', aux => ord( 'X' ) } ]
+        },
+        i => { code => undef, aux => undef }
+      };
+      my $tree = { tag => 'TChar', n => ord( 'X' ) };
+      my $opt;
+      my $tt = 0;
+      my $fl;
+      $codegen->codegen( $compst, $tree, $opt, $tt, $fl );
+      is_deeply( $compst->{p}->{code}, [
+        { code => 'IAny', aux => 0 }
+      ] );
+    }
+    #
+    # else (codecharset)(codechar)
+    #
+    { my $compst = {
+        ncode => 0,
+        p => {
+          codesize => 0,
+                  # Just something that's not ITestChar.
+          code => [ { code => 'foo', aux => 0 } ]
+        },
+        i => { code => undef, aux => undef }
+      };
+      my $tree = { tag => 'TChar', n => ord( 'X' ) };
+      my $opt;
+      my $tt = 0;
+      my $fl;
+      $codegen->codegen( $compst, $tree, $opt, $tt, $fl );
+      is_deeply( $compst->{p}->{code}, [
+        { code => 'IChar', aux => ord( 'X' ) }
+      ] );
+    }
+  }
+  #
+  # Elsif($ISet)
+  #
+  { my $compst = {
+      ncode => 0,
+      p => {
+        codesize => 0,
+        code => [ { code => 'ISet', aux => ord( 'X' ) } ]
+      },
+      i => { code => undef, aux => undef }
+    };
+    my $tree = { tag => 'TChar', n => ord( 'X' ) };
+    my $opt;
+    my $tt = 0;
+    my $fl;
+    $codegen->codegen( $compst, $tree, $opt, $tt, $fl );
+    is_deeply( $compst->{p}->{code}, [
+      { code => 'IAny', aux => 0 }
+    ] );
+  }
+}
+#...
 { my $compst = {
     ncode => 0,
     p => {
@@ -29,7 +181,7 @@ my $codegen = JGoff::Parser::PEG::Codegen->new;
   my $fl;
   $codegen->codegen( $compst, $tree, $opt, $tt, $fl );
   is_deeply( $compst->{p}->{code}, [
-    { opcode => 'IFail', aux => 0 }
+    { code => 'IFail', aux => 0 }
   ] );
 }
 
